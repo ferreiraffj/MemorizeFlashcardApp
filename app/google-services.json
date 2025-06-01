@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "481201669823",
+    "project_id": "memorizeflashcardapp",
+    "storage_bucket": "memorizeflashcardapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:481201669823:android:d8613886433707b580e80a",
+        "android_client_info": {
+          "package_name": "com.unip.cc7p33.memorizeflashcardapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "481201669823-8g20de3o476cspgp33r1d9nplboam28j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzCvjSWzrjQDZEXRsm4_SAvKDdQ6pNvpU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "481201669823-8g20de3o476cspgp33r1d9nplboam28j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
