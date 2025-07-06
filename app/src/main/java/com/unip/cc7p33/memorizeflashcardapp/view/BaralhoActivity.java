@@ -23,4 +23,6 @@ public class BaralhoActivity extends AppCompatActivity {
             return insets;
         });
     }
+
+
 }
