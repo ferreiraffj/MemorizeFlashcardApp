@@ -37,7 +37,7 @@ Desenvolver uma ferramenta de estudos baseada em flashcards que:
 ## :open_file_folder: Estrutura do Projeto  
 
 ```javascript
-memorizeflashcardaoo/
+memorizeflashcardaapp/
 ├── app/
 │ ├── src/main/
 │ │ ├── java/com/flashmaster/
