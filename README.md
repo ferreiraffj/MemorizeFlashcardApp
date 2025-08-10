@@ -37,7 +37,7 @@ Desenvolver uma ferramenta de estudos baseada em flashcards que:
 ## :open_file_folder: Estrutura do Projeto  
 
 ```javascript
-flashmaster/
+memorizeflashcardaapp/
 ├── app/
 │ ├── src/main/
 │ │ ├── java/com/flashmaster/
@@ -52,3 +52,6 @@ flashmaster/
 
 :page_facing_up: Licença
 Este projeto está sob licença MIT [Clique para detalhes.](https://choosealicense.com/licenses/mit/) 
+
+## Manual para contribuição
+[MemorizeFlashcardApp - Manual](https://opaque-salute-56f.notion.site/Contribuindo-com-um-projeto-no-github-2283e5e3a05180e8bbacdf5cec395274)
