@@ -1,4 +1,5 @@
 [versions]
+agp = "8.11.1"
 firebaseBom = "33.14.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
