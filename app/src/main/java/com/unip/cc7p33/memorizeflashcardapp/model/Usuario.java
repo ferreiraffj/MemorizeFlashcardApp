@@ -1,8 +1,12 @@
 package com.unip.cc7p33.memorizeflashcardapp.model;
 
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
 import com.google.firebase.firestore.DocumentId;
 
+@Entity(tableName = "usuario")
 public class Usuario {
+    @PrimaryKey
     @DocumentId
     private String uid; // ID do usuário, que será o mesmo do Firebase Auth
     private String nome;
