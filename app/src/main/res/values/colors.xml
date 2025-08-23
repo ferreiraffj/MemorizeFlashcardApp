@@ -2,4 +2,8 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="blueBgAuth">#6191EA</color>
+    <color name="blueBgAuthReset">#444FC9</color>
+    <color name="blueBtnAuth">#3972DB</color>
+    <color name="grayTxtAuth">#7A7A7A</color>
 </resources>
