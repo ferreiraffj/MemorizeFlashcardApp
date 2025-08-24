@@ -37,7 +37,7 @@ public class RegisterActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progress_bar_registro);
 
         // Instancia a classe de serviço
-        authService = new AuthService();
+        authService = new AuthService(this);
 
         // Configura o evento de clique do botão de registro
         btnRegistrar.setOnClickListener(v -> {

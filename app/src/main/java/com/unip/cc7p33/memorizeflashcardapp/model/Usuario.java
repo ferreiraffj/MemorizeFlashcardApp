@@ -1,5 +1,6 @@
 package com.unip.cc7p33.memorizeflashcardapp.model;
 
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import com.google.firebase.firestore.DocumentId;
@@ -8,6 +9,7 @@ import com.google.firebase.firestore.DocumentId;
 public class Usuario {
     @PrimaryKey
     @DocumentId
+    @NonNull
     private String uid; // ID do usuário, que será o mesmo do Firebase Auth
     private String nome;
     private String email;

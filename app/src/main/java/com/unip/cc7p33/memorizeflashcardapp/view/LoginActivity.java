@@ -39,7 +39,7 @@ public class LoginActivity extends AppCompatActivity {
         textViewRegistrarAgora = findViewById(R.id.text_view_registrar_agora);
         progressBar = findViewById(R.id.progress_bar_login);
 
-        authService = new AuthService();
+        authService = new AuthService(this);
 
         // Redireciona para a tela principal se o usuário já estiver logado
 //        if (authService.getCurrentUser() != null) {
