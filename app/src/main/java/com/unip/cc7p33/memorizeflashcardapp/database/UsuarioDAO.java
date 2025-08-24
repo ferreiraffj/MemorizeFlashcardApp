@@ -20,5 +20,5 @@ public interface UsuarioDAO {
     Usuario getUserByEmail(String email);
 
     @Query("DELETE from usuario")
-    void deleteAllUser();
+    void deleteAllUsers();
 }

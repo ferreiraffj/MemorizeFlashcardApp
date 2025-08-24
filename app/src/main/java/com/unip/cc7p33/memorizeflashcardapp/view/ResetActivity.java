@@ -33,7 +33,7 @@ public class ResetActivity extends AppCompatActivity {
         btnResetSenha = findViewById(R.id.btn_reset_senha);
         progressBar = findViewById(R.id.progress_bar_reset);
 
-        authService = new AuthService();
+        authService = new AuthService(this);
 
         btnResetSenha.setOnClickListener(v -> {
             String email = editTextEmail.getText().toString().trim();
