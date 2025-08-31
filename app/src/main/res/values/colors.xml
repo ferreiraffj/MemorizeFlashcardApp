@@ -2,8 +2,16 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
     <color name="blueBgAuth">#6191EA</color>
     <color name="blueBgAuthReset">#444FC9</color>
     <color name="blueBtnAuth">#3972DB</color>
     <color name="grayTxtAuth">#7A7A7A</color>
+
+    <color name="colorPrimary">#6191EA</color>
+    <color name="toolbarWhiteBg">#FFFFFFFF</color>
+    <color name="toolbarTitleBlue">#6191EA</color>
+    <color name="blueStripe">#6191EA</color>
+    <color name="colorDeckItemBackground">#6495ED</color>
+    <color name="colorFab">#4682B4</color>
 </resources>
