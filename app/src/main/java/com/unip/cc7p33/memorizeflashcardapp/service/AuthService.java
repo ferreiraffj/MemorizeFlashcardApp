@@ -117,6 +117,9 @@ public class AuthService {
         mAuth.signOut();
     }
 
+    public void clearLocalData() {
+        authRepository.deleteAllUsers();
+    }
     public FirebaseUser getCurrentUser() {
         return mAuth.getCurrentUser();
     } // recupera usuário atual logado

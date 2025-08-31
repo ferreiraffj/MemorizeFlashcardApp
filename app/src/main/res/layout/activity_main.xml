@@ -11,27 +11,29 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/toolbarWhiteBg"> <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar_main"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/toolbarWhiteBg"
-        app:navigationIcon="@drawable/ic_menu"> <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="MEMORIZE APP"
-        android:textColor="@color/toolbarTitleBlue"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        />
-    </androidx.appcompat.widget.Toolbar>
+        android:background="@color/toolbarWhiteBg">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar_main"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/toolbarWhiteBg"
+            app:navigationIcon="@drawable/ic_menu">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="MEMORIZE APP"
+                android:textColor="@color/toolbarTitleBlue"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+        </androidx.appcompat.widget.Toolbar>
 
         <View
             android:layout_width="match_parent"
-            android:layout_height="168dp"
+            android:layout_height="100dp"
             android:background="@color/blueStripe" />
-
     </com.google.android.material.appbar.AppBarLayout>
 
     <FrameLayout
@@ -42,7 +44,7 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler_view_decks"
             android:layout_width="match_parent"
-            android:layout_height="384dp"
+            android:layout_height="match_parent"
             android:padding="16dp"
             tools:listitem="@layout/item_baralho" />
 
@@ -50,23 +52,83 @@
             android:id="@+id/text_view_no_decks_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Adicione baralhos para que apareçam aqui!"
-            android:textSize="18sp"
-            android:textColor="@color/grayTxtAuth"
             android:layout_gravity="center"
-            android:visibility="gone"
-            />
+            android:text="Adicione baralhos para que apareçam aqui!"
+            android:textColor="@color/grayTxtAuth"
+            android:textSize="18sp"
+            android:visibility="gone" />
     </FrameLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_add_deck"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:contentDescription="Adicionar novo baralho"
-        android:src="@drawable/ic_add"
-        app:backgroundTint="@color/colorFab"
-        app:tint="@android:color/white" />
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp">
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_create_deck"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="invisible"
+            app:backgroundTint="@color/colorFab"
+            app:fabSize="normal"
+            app:srcCompat="@drawable/ic_create_deck"
+            app:tint="@android:color/white"
+            app:layout_constraintBottom_toTopOf="@+id/fab_add_card"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/text_view_create_deck_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/btn_arredondado"
+            android:padding="8dp"
+            android:text="Criar baralho"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@+id/fab_create_deck"
+            app:layout_constraintEnd_toStartOf="@+id/fab_create_deck"
+            app:layout_constraintTop_toTopOf="@+id/fab_create_deck" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_add_card"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="invisible"
+            app:backgroundTint="@color/colorFab"
+            app:fabSize="normal"
+            app:srcCompat="@drawable/ic_add_card"
+            app:tint="@android:color/white"
+            app:layout_constraintBottom_toTopOf="@+id/fab_add_deck"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/text_view_add_card_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/btn_arredondado"
+            android:padding="8dp"
+            android:text="Adicionar"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@+id/fab_add_card"
+            app:layout_constraintEnd_toStartOf="@+id/fab_add_card"
+            app:layout_constraintTop_toTopOf="@+id/fab_add_card" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_add_deck"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Adicionar novo baralho"
+            android:src="@drawable/ic_add"
+            app:backgroundTint="@color/colorFab"
+            app:tint="@android:color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
