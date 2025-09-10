@@ -1,60 +1,47 @@
 package com.unip.cc7p33.memorizeflashcardapp.repository;
 
 import android.content.Context;
-import android.os.AsyncTask;
-
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
 import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class AuthRepository {
 
     private UsuarioDAO usuarioDao;
+    private final ExecutorService executor;
+
+    public interface GetUserCallback {
+        void onUserFound(Usuario usuario);
+        void onUserNotFound();
+    }
 
     public AuthRepository(Context context) {
-        // Constrói a instância do banco de dados Room
         AppDatabase db = AppDatabase.getDatabase(context);
         usuarioDao = db.usuarioDao();
+        executor = Executors.newSingleThreadExecutor();
     }
 
     // Insere um usuário no banco de dados local
     public void insertUser(Usuario usuario) {
-        new InsertUserAsyncTask(usuarioDao).execute(usuario);
+        executor.execute(() -> usuarioDao.insertUser(usuario));
     }
 
-    // Busca um usuário por email no banco de dados local
-    public Usuario getUserByEmail(String email) {
-        return usuarioDao.getUserByEmail(email);
+    // Busca um usuário por e-mail de forma assíncrona
+    public void getUserByEmail(String email, GetUserCallback callback) {
+        executor.execute(() -> {
+            Usuario usuario = usuarioDao.getUserByEmail(email);
+            if (usuario != null) {
+                callback.onUserFound(usuario);
+            } else {
+                callback.onUserNotFound();
+            }
+        });
     }
 
     // Deleta todos os usuários do banco de dados local
     public void deleteAllUsers() {
-        new DeleteAllUsersAsyncTask(usuarioDao).execute();
-    }
-
-    // AsyncTask para rodar a inserção em um thread separado
-    private static class InsertUserAsyncTask extends AsyncTask<Usuario, Void, Void> {
-        private UsuarioDAO dao;
-        private InsertUserAsyncTask(UsuarioDAO dao) {
-            this.dao = dao;
-        }
-        @Override
-        protected Void doInBackground(Usuario... usuarios) {
-            dao.insertUser(usuarios[0]);
-            return null;
-        }
-    }
-
-    // AsyncTask para rodar a exclusão em um thread separado
-    private static class DeleteAllUsersAsyncTask extends AsyncTask<Void, Void, Void> {
-        private UsuarioDAO dao;
-        private DeleteAllUsersAsyncTask(UsuarioDAO dao) {
-            this.dao = dao;
-        }
-        @Override
-        protected Void doInBackground(Void... voids) {
-            dao.deleteAllUsers();
-            return null;
-        }
+        executor.execute(() -> usuarioDao.deleteAllUsers());
     }
 }
