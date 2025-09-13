@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.adapter.BaralhoAdapter;
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
