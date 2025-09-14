@@ -84,12 +84,10 @@ public class LoginActivity extends AppCompatActivity {
             });
         });
 
-        // Evento de clique para ir para a tela de registro
         textViewRegistrarAgora.setOnClickListener(vi -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
         });
 
-        // Evento de clique para ir para a tela de reset de senha
         textViewEsqueciSenha.setOnClickListener(vie -> {
             startActivity(new Intent(LoginActivity.this, ResetActivity.class));
         });

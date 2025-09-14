@@ -15,6 +15,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MemorizeFlashcardApp"
         tools:targetApi="31">
+
+        <activity
+            android:name=".view.AddCardActivity"
+            android:exported="false" />
+
         <activity
             android:name=".view.DesempenhoActivity"
             android:exported="false" />
@@ -35,6 +40,9 @@
             android:exported="false" />
         <activity
             android:name=".view.ResetActivity"
+            android:exported="false" />
+        <activity
+            android:name=".view.CardListActivity"
             android:exported="false" />
         <activity
             android:name=".view.LoginActivity"
