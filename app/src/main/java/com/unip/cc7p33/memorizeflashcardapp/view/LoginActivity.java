@@ -41,6 +41,12 @@ public class LoginActivity extends AppCompatActivity {
 
         authService = new AuthService(this);
 
+        // Redireciona para a tela principal se o usuário já estiver logado
+        if (authService.getCurrentUser() != null) {
+            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+            finish();
+        }
+
         btnLogin.setOnClickListener(v -> {
             String email = editTextEmail.getText().toString().trim();
             String senha = editTextSenha.getText().toString().trim();

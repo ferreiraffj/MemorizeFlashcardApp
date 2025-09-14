@@ -12,6 +12,8 @@ import com.unip.cc7p33.memorizeflashcardapp.repository.AuthRepository;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class AuthService {
 
@@ -28,7 +30,7 @@ public class AuthService {
     public AuthService(Context context){
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-        authRepository = new AuthRepository(context);
+        authRepository = new AuthRepository(context); // Chama o construtor correto
         this.context = context;
     }
 
@@ -92,12 +94,17 @@ public class AuthService {
                     });
         } else {
             // Se não houver internet, tenta buscar o usuário localmente
-            Usuario usuarioLocal = authRepository.getUserByEmail(email);
-            if (usuarioLocal != null) {
-                callback.onSuccess(usuarioLocal);
-            } else {
-                callback.onFailure("Sem conexão com a internet. E-mail não encontrado no banco de dados local.");
-            }
+            authRepository.getUserByEmail(email, new AuthRepository.GetUserCallback() {
+                @Override
+                public void onUserFound(Usuario usuario) {
+                    callback.onSuccess(usuario);
+                }
+
+                @Override
+                public void onUserNotFound() {
+                    callback.onFailure("Sem conexão com a internet. E-mail não encontrado no banco de dados local");
+                }
+            });
         }
     }
 

@@ -62,4 +62,15 @@ dependencies {
     val room_version = "2.7.2"
     implementation("androidx.room:room-runtime:$room_version")
     annotationProcessor("androidx.room:room-compiler:$room_version")
+
+    // Para testes de unidade
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:4.8.0") // Mockito para simular objetos
+    testImplementation("org.robolectric:robolectric:4.9") // Robolectric para testes que precisam de Android framework (como Context)
+
+    // Para testes do Room
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
+
+    // Para testes de corrotinas
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
 }
