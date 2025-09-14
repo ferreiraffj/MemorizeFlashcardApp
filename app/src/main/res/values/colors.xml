@@ -14,5 +14,8 @@
     <color name="blueStripe">#6191EA</color>
     <color name="colorDeckItemBackground">#6495ED</color>
     <color name="colorFab">#4682B4</color>
-    <color name="cardListBackground">#E8EAF6</color> ```
+    <color name="cardListBackground">#E8EAF6</color>
+    <color name="studyCardBlue">#6495ED</color>
+    <color name="studyEasyGreen">#388E3C</color>
+    <color name="studyHardRed">#D32F2F</color>
 </resources>
