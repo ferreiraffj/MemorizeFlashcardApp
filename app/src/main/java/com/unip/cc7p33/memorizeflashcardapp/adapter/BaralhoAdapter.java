@@ -1,4 +1,3 @@
-// adapter/BaralhoAdapter.java
 package com.unip.cc7p33.memorizeflashcardapp.adapter;
 
 import android.view.LayoutInflater;
@@ -17,6 +16,19 @@ import java.util.List;
 public class BaralhoAdapter extends RecyclerView.Adapter<BaralhoAdapter.BaralhoViewHolder> {
 
     private List<Baralho> baralhos;
+    private OnItemClickListener listener; // <-- ADICIONADO
+
+    // --- INÍCIO DO CÓDIGO NOVO ---
+    // Interface que a Activity vai implementar para receber o evento de clique
+    public interface OnItemClickListener {
+        void onItemClick(Baralho baralho);
+    }
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.listener = listener;
+    }
+    // --- FIM DO CÓDIGO NOVO ---
+
 
     public BaralhoAdapter(List<Baralho> baralhos) {
         this.baralhos = baralhos;
@@ -34,6 +46,16 @@ public class BaralhoAdapter extends RecyclerView.Adapter<BaralhoAdapter.BaralhoV
         Baralho baralho = baralhos.get(position);
         holder.deckName.setText(baralho.getNome());
         holder.cardCount.setText(String.valueOf(baralho.getQuantidadeCartas()));
+
+        // --- INÍCIO DA ALTERAÇÃO NO MÉTODO ---
+        // Configura o clique no item da lista
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                // Chama o método da interface, passando o objeto do baralho clicado
+                listener.onItemClick(baralho);
+            }
+        });
+        // --- FIM DA ALTERAÇÃO NO MÉTODO ---
     }
 
     @Override

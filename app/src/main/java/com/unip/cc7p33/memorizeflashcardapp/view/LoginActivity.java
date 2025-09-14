@@ -41,12 +41,6 @@ public class LoginActivity extends AppCompatActivity {
 
         authService = new AuthService(this);
 
-        // Redireciona para a tela principal se o usuário já estiver logado
-//        if (authService.getCurrentUser() != null) {
-//            startActivity(new Intent(LoginActivity.this, MainActivity.class));
-//            finish();
-//        }
-
         btnLogin.setOnClickListener(v -> {
             String email = editTextEmail.getText().toString().trim();
             String senha = editTextSenha.getText().toString().trim();
@@ -84,12 +78,10 @@ public class LoginActivity extends AppCompatActivity {
             });
         });
 
-        // Evento de clique para ir para a tela de registro
         textViewRegistrarAgora.setOnClickListener(vi -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
         });
 
-        // Evento de clique para ir para a tela de reset de senha
         textViewEsqueciSenha.setOnClickListener(vie -> {
             startActivity(new Intent(LoginActivity.this, ResetActivity.class));
         });
