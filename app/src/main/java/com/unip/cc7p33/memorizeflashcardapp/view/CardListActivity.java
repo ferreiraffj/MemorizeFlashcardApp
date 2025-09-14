@@ -7,24 +7,25 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog; // Import necessário
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton; // Import necessário
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.adapter.FlashcardAdapter;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
-import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService; // Import necessário
+import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService;
 import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 
+import java.io.Serializable; // Import necessário
 import java.util.ArrayList;
 import java.util.List;
 
-// ALTERAÇÃO 1: Implementa a nova interface de clique para deletar
 public class CardListActivity extends AppCompatActivity implements FlashcardAdapter.OnItemClickListener, FlashcardAdapter.OnDeleteClickListener {
 
     private RecyclerView recyclerView;
@@ -58,8 +59,23 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
         cardList = new ArrayList<>();
         adapter = new FlashcardAdapter(cardList);
         adapter.setOnItemClickListener(this);
-        adapter.setOnDeleteClickListener(this); // <-- ALTERAÇÃO 2: Registra o listener de exclusão
+        adapter.setOnDeleteClickListener(this);
         recyclerView.setAdapter(adapter);
+
+        // --- INÍCIO DA ALTERAÇÃO (PASSO 3) ---
+        FloatingActionButton fabStartStudy = findViewById(R.id.fab_start_study);
+        fabStartStudy.setOnClickListener(v -> {
+            if (cardList != null && !cardList.isEmpty()) {
+                Intent intent = new Intent(CardListActivity.this, SessaoEstudoActivity.class);
+                // Passa a lista de cartas e o nome do baralho para a próxima tela
+                intent.putExtra("CARD_LIST", (Serializable) cardList);
+                intent.putExtra("DECK_NAME", getIntent().getStringExtra("DECK_NAME"));
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "Não há cartas para estudar neste baralho.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        // --- FIM DA ALTERAÇÃO ---
     }
 
     @Override
@@ -111,7 +127,6 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
         startActivity(intent);
     }
 
-    // --- ALTERAÇÃO 3: NOVO MÉTODO PARA LIDAR COM O CLIQUE DE EXCLUSÃO ---
     @Override
     public void onDeleteClick(Flashcard card, int position) {
         new AlertDialog.Builder(this)
@@ -123,13 +138,9 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
                     String userId = currentUser.getUid();
                     String currentDeckId = getIntent().getStringExtra("DECK_ID");
 
-                    // Deleta a carta do Firestore
                     flashcardService.deletarCarta(userId, currentDeckId, card.getId())
                             .addOnSuccessListener(aVoid -> {
-                                // Decrementa o contador do baralho
                                 new BaralhoService().decrementarContagem(userId, currentDeckId);
-
-                                // Remove da lista local e notifica o adapter
                                 cardList.remove(position);
                                 adapter.notifyItemRemoved(position);
                                 Toast.makeText(this, "Carta excluída.", Toast.LENGTH_SHORT).show();
