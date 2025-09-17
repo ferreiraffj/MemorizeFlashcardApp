@@ -1,50 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:gravity="center"
     android:padding="16dp"
+    android:background="@color/blueBgAuth"
     tools:context=".view.RegisterActivity">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Crie sua conta"
+        android:layout_marginBottom="50dp"
+        android:text="CRIE SUA CONTA"
+        android:textColor="@color/white"
         android:textSize="24sp"
-        android:layout_marginBottom="32dp"/>
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/edit_text_nome_registro"
-        android:layout_width="match_parent"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:hint="Nome"
+        android:textColorHint="@color/grayTxtAuth"
+        android:background="@drawable/btn_arredondado"
+        android:padding="12dp"
         android:inputType="textPersonName"
         android:layout_marginBottom="16dp"/>
 
     <EditText
         android:id="@+id/edit_text_email_registro"
-        android:layout_width="match_parent"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:hint="Email"
+        android:textColorHint="@color/grayTxtAuth"
+        android:background="@drawable/btn_arredondado"
+        android:padding="12dp"
         android:inputType="textEmailAddress"
         android:layout_marginBottom="16dp"/>
 
     <EditText
         android:id="@+id/edit_text_senha_registro"
-        android:layout_width="match_parent"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:hint="Senha"
+        android:textColorHint="@color/grayTxtAuth"
+        android:background="@drawable/btn_arredondado"
+        android:padding="12dp"
         android:inputType="textPassword"
         android:layout_marginBottom="16dp"/>
 
     <Button
         android:id="@+id/btn_registrar"
-        android:layout_width="match_parent"
+        android:layout_width="115dp"
         android:layout_height="wrap_content"
-        android:text="Registrar"/>
+        android:layout_marginTop="10dp"
+        android:background="@drawable/btn_arredondado_blue"
+        android:text="Registrar"
+        android:textStyle="bold"
+        app:backgroundTint="@null"/>
 
     <ProgressBar
         android:id="@+id/progress_bar_registro"

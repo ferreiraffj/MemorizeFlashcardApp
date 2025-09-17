@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/blueBgAuthReset"
     android:orientation="vertical"
     android:gravity="center"
     android:padding="16dp"
@@ -13,22 +14,30 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Recuperar Senha"
+        android:textColor="@color/white"
         android:textSize="24sp"
+        android:textStyle="bold"
         android:layout_marginBottom="32dp"/>
 
     <EditText
         android:id="@+id/edit_text_email_reset"
-        android:layout_width="match_parent"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
+        android:textColorHint="@color/grayTxtAuth"
+        android:background="@drawable/btn_arredondado"
+        android:padding="12dp"
         android:hint="Email"
         android:inputType="textEmailAddress"
         android:layout_marginBottom="16dp"/>
 
     <Button
         android:id="@+id/btn_reset_senha"
-        android:layout_width="match_parent"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
-        android:text="Enviar link de recuperação"/>
+        android:background="@drawable/btn_arredondado_blue"
+        android:text="Enviar link de recuperação"
+        android:layout_marginTop="10dp"
+        app:backgroundTint="@null" />
 
     <ProgressBar
         android:id="@+id/progress_bar_reset"
