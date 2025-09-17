@@ -46,8 +46,10 @@ public class AuthService {
                            db.collection("users").document(firebaseUser.getUid()) // cria ou utiliza a coleção "users" e define que o id do documento será o UID
                                    .set(novoUsuario) // Salva o objeto Usuario diretamente no Firestore
                                    .addOnSuccessListener(aVoid ->{ // listener de sucesso
-                                       authRepository.insertUser(novoUsuario);
-                                       callback.onSuccess(novoUsuario);
+                                       authRepository.insertUser(novoUsuario, () -> {
+                                           // Este código só será executado quando a inserção terminar
+                                           callback.onSuccess(novoUsuario);
+                                       });
                                    })
                                    .addOnFailureListener(e ->{ // listener de exceção
                                         callback.onFailure("Erro ao salvar os dados do usuário: " + e.getMessage());
@@ -69,14 +71,21 @@ public class AuthService {
                         if (task.isSuccessful()) {
                             FirebaseUser firebaseUser = mAuth.getCurrentUser();
                             if (firebaseUser != null) {
-                                // Recupera os dados do usuário do Firestore
                                 db.collection("users").document(firebaseUser.getUid())
                                         .get()
                                         .addOnSuccessListener(documentSnapshot -> {
                                             if (documentSnapshot.exists()) {
-                                                Usuario usuario = documentSnapshot.toObject(Usuario.class); // Converte o documento para um objeto Usuario
-                                                authRepository.insertUser(usuario);  // Salva o usuário no banco de dados local
-                                                callback.onSuccess(usuario);
+                                                Usuario usuario = documentSnapshot.toObject(Usuario.class);
+
+                                                // Garante que o UID do Firebase Auth seja o UID do objeto Usuario
+                                                if (usuario != null) {
+                                                    usuario.setUid(firebaseUser.getUid());
+                                                }
+
+                                                authRepository.insertUser(usuario, () -> {
+                                                    callback.onSuccess(usuario);
+                                                });
+
                                             } else {
                                                 callback.onFailure("Dados do usuário não encontrados.");
                                             }
@@ -93,7 +102,7 @@ public class AuthService {
                         }
                     });
         } else {
-            // Se não houver internet, tenta buscar o usuário localmente
+            // Lógica offline, utilizando a nova chamada assíncrona
             authRepository.getUserByEmail(email, new AuthRepository.GetUserCallback() {
                 @Override
                 public void onUserFound(Usuario usuario) {
@@ -102,7 +111,7 @@ public class AuthService {
 
                 @Override
                 public void onUserNotFound() {
-                    callback.onFailure("Sem conexão com a internet. E-mail não encontrado no banco de dados local");
+                    callback.onFailure("Sem conexão com a internet. E-mail não encontrado no banco de dados local.");
                 }
             });
         }

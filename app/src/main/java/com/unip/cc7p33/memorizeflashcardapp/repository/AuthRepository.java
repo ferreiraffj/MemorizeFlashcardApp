@@ -17,15 +17,23 @@ public class AuthRepository {
         void onUserNotFound();
     }
 
+    // Novo callback para a inserção
+    public interface InsertUserCallback {
+        void onInsertComplete();
+    }
+
     public AuthRepository(Context context) {
         AppDatabase db = AppDatabase.getDatabase(context);
         usuarioDao = db.usuarioDao();
         executor = Executors.newSingleThreadExecutor();
     }
 
-    // Insere um usuário no banco de dados local
-    public void insertUser(Usuario usuario) {
-        executor.execute(() -> usuarioDao.insertUser(usuario));
+    // Insere um usuário no banco de dados local com callback
+    public void insertUser(Usuario usuario, InsertUserCallback callback) {
+        executor.execute(() -> {
+            usuarioDao.insertUser(usuario);
+            callback.onInsertComplete();
+        });
     }
 
     // Busca um usuário por e-mail de forma assíncrona
