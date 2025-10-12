@@ -4,106 +4,76 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
-import com.unip.cc7p33.memorizeflashcardapp.repository.AuthRepository;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.unip.cc7p33.memorizeflashcardapp.repository.IAuthRepository;
+import com.unip.cc7p33.memorizeflashcardapp.repository.ICloudAuthDataSource;
 
 public class AuthService {
 
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
-    private AuthRepository authRepository;
-    private Context context;
+    private final ICloudAuthDataSource cloudAuthDataSource;
+    private final IAuthRepository authRepository;
+    private final ConnectivityManager connectivityManager;
 
-    public interface AuthCallback{
+    public interface AuthCallback {
         void onSuccess(Usuario usuario);
         void onFailure(String errorMessage);
-    } //
-
-    public AuthService(Context context){
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
-        authRepository = new AuthRepository(context); // Chama o construtor correto
-        this.context = context;
     }
 
-    public void registerUser(String email, String password, String nome, AuthCallback callback){
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(task -> {
-                   if (task.isSuccessful()){
-                       FirebaseUser firebaseUser = mAuth.getCurrentUser(); // atribui a variavel user o usuário autenticado
-                       if (firebaseUser != null){
-                           Usuario novoUsuario = new Usuario(nome, email); // Cria um novo objeto Usuario
-                           novoUsuario.setUid(firebaseUser.getUid());
+    // NOVO CONSTRUTOR: Recebe todas as dependências como interfaces
+    // O Context é mantido APENAS para o serviço do ConnectivityManager
+    public AuthService(ICloudAuthDataSource cloudAuthDataSource, IAuthRepository authRepository, ConnectivityManager connectivityManager) {
+        this.cloudAuthDataSource = cloudAuthDataSource;
+        this.authRepository = authRepository;
+        this.connectivityManager = connectivityManager;
+    }
 
-                           db.collection("users").document(firebaseUser.getUid()) // cria ou utiliza a coleção "users" e define que o id do documento será o UID
-                                   .set(novoUsuario) // Salva o objeto Usuario diretamente no Firestore
-                                   .addOnSuccessListener(aVoid ->{ // listener de sucesso
-                                       authRepository.insertUser(novoUsuario, () -> {
-                                           // Este código só será executado quando a inserção terminar
-                                           callback.onSuccess(novoUsuario);
-                                       });
-                                   })
-                                   .addOnFailureListener(e ->{ // listener de exceção
-                                        callback.onFailure("Erro ao salvar os dados do usuário: " + e.getMessage());
-                                   });
-                       } else {
-                           callback.onFailure("Usuário não encontrado após o registro.");
-                       }
-                   } else {
-                       callback.onFailure(task.getException() != null ?
-                               task.getException().getMessage() : "Erro desconhecido no registro");
-                   }
+    // Construtor auxiliar da Activity (para manter a compatibilidade no código de produção)
+    public AuthService(Context context) {
+        this.cloudAuthDataSource = new com.unip.cc7p33.memorizeflashcardapp.repository.FirebaseAuthDataSource();
+        this.authRepository = new com.unip.cc7p33.memorizeflashcardapp.repository.AuthRepository(context);
+        this.connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+    }
+
+    public void registerUser(String email, String password, String nome, AuthCallback callback) {
+        // Chama o data source Cloud
+        cloudAuthDataSource.registerUser(email, password, nome, new ICloudAuthDataSource.AuthResultCallback() {
+            @Override
+            public void onSuccess(FirebaseUser user, Usuario novoUsuario) {
+                // Se o Cloud teve sucesso, salva localmente
+                authRepository.insertUser(novoUsuario, () -> {
+                    callback.onSuccess(novoUsuario);
                 });
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
     }
 
-    public void loginUser(String email, String password, AuthCallback callback){
-        if(isConnectedToInternet()){
-            mAuth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            FirebaseUser firebaseUser = mAuth.getCurrentUser();
-                            if (firebaseUser != null) {
-                                db.collection("users").document(firebaseUser.getUid())
-                                        .get()
-                                        .addOnSuccessListener(documentSnapshot -> {
-                                            if (documentSnapshot.exists()) {
-                                                Usuario usuario = documentSnapshot.toObject(Usuario.class);
-
-                                                // Garante que o UID do Firebase Auth seja o UID do objeto Usuario
-                                                if (usuario != null) {
-                                                    usuario.setUid(firebaseUser.getUid());
-                                                }
-
-                                                authRepository.insertUser(usuario, () -> {
-                                                    callback.onSuccess(usuario);
-                                                });
-
-                                            } else {
-                                                callback.onFailure("Dados do usuário não encontrados.");
-                                            }
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            callback.onFailure("Erro ao buscar dados do usuário: " + e.getMessage());
-                                        });
-                            } else {
-                                callback.onFailure("Usuário não encontrado após o login.");
-                            }
-                        } else {
-                            callback.onFailure(task.getException() != null ?
-                                    task.getException().getMessage() : "Erro desconhecido no login.");
-                        }
+    public void loginUser(String email, String password, AuthCallback callback) {
+        if (isConnectedToInternet()) {
+            // Chama o data source Cloud
+            cloudAuthDataSource.loginUser(email, password, new ICloudAuthDataSource.AuthResultCallback() {
+                @Override
+                public void onSuccess(FirebaseUser user, Usuario usuario) {
+                    // Se o Cloud teve sucesso, salva localmente
+                    authRepository.insertUser(usuario, () -> {
+                        callback.onSuccess(usuario);
                     });
+                }
+
+                @Override
+                public void onFailure(String errorMessage) {
+                    callback.onFailure(errorMessage);
+                }
+            });
+
         } else {
-            // Lógica offline, utilizando a nova chamada assíncrona
-            authRepository.getUserByEmail(email, new AuthRepository.GetUserCallback() {
+            // Lógica offline, utilizando a nova interface (IAuthRepository)
+            authRepository.getUserByEmail(email, new IAuthRepository.GetUserCallback() {
                 @Override
                 public void onUserFound(Usuario usuario) {
                     callback.onSuccess(usuario);
@@ -117,34 +87,36 @@ public class AuthService {
         }
     }
 
-    public void resetPassword(String email, AuthCallback callback){
-        mAuth.sendPasswordResetEmail(email)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()){
-                        callback.onSuccess(null); //retorna apenas sucesso na operação
-                    } else {
-                        callback.onFailure(task.getException() != null ?
-                                task.getException().getMessage() : "Erro desconhecido ao resetar a senha");
-                    }
-                });
+    public void resetPassword(String email, AuthCallback callback) {
+        cloudAuthDataSource.resetPassword(email, new ICloudAuthDataSource.AuthResultCallback() {
+            @Override
+            public void onSuccess(FirebaseUser user, Usuario userData) {
+                callback.onSuccess(null); // Retorna apenas sucesso na operação
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
     }
 
-    public void logout(){
-        mAuth.signOut();
+    public void logout() {
+        cloudAuthDataSource.logout();
     }
 
     public void clearLocalData() {
         authRepository.deleteAllUsers();
     }
-    public FirebaseUser getCurrentUser() {
-        return mAuth.getCurrentUser();
-    } // recupera usuário atual logado
 
-    private boolean isConnectedToInternet(){
-        if (context == null) {
+    public FirebaseUser getCurrentUser() {
+        return cloudAuthDataSource.getCurrentUser();
+    }
+
+    private boolean isConnectedToInternet() {
+        if (connectivityManager == null) {
             return false;
         }
-        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
         return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }

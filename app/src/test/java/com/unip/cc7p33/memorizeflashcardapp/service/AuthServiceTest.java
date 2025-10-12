@@ -1,178 +1,125 @@
 package com.unip.cc7p33.memorizeflashcardapp.service;
 
-import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
-import com.unip.cc7p33.memorizeflashcardapp.repository.AuthRepository;
+import com.unip.cc7p33.memorizeflashcardapp.repository.IAuthRepository;
+import com.unip.cc7p33.memorizeflashcardapp.repository.ICloudAuthDataSource;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.robolectric.RobolectricTestRunner;
-import org.robolectric.annotation.Config;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.*;
 
-@RunWith(RobolectricTestRunner.class)
-@Config(manifest=Config.NONE)
 public class AuthServiceTest {
 
-    @Mock
-    private Context mockContext;
-    @Mock
-    private FirebaseAuth mockFirebaseAuth;
-    @Mock
-    private FirebaseFirestore mockFirestore;
-    @Mock
-    private AuthRepository mockAuthRepository;
-    @Mock
-    private ConnectivityManager mockConnectivityManager;
-    @Mock
-    private NetworkInfo mockNetworkInfo;
-    @Mock
-    private Task<AuthResult> mockAuthTask;
-    @Mock
-    private Task<DocumentSnapshot> mockFirestoreTask;
-    @Mock
-    private Task<Void> mockSetTask;
-    @Mock
-    private FirebaseUser mockFirebaseUser;
-    @Mock
-    private CollectionReference mockCollectionReference;
-    @Mock
-    private DocumentReference mockDocumentReference;
-    @Mock
-    private DocumentSnapshot mockDocumentSnapshot;
-    @Mock
-    private AuthService.AuthCallback mockCallback;
+    // Dependências Mockadas (Simuladas)
+    @Mock ICloudAuthDataSource mockCloudDataSource;
+    @Mock IAuthRepository mockRepository;
+    @Mock ConnectivityManager mockConnectivityManager;
+    @Mock AuthService.AuthCallback mockCallback;
+    @Mock NetworkInfo mockNetworkInfo;
+    @Mock FirebaseUser mockFirebaseUser;
 
     private AuthService authService;
+
+    // Captura os argumentos passados para os callbacks
+    @Captor ArgumentCaptor<ICloudAuthDataSource.AuthResultCallback> cloudCallbackCaptor;
+    @Captor ArgumentCaptor<IAuthRepository.InsertUserCallback> repositoryCallbackCaptor;
+
 
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
+        // Cria a instância de AuthService com os mocks injetados
+        authService = new AuthService(mockCloudDataSource, mockRepository, mockConnectivityManager);
+    }
 
-        // Simula o contexto para que o ConnectivityManager funcione
-        when(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(mockConnectivityManager);
+    // --- CENÁRIOS ONLINE ---
+
+    @Test
+    public void testLogin_Online_Success() {
+        Usuario testUser = new Usuario("Teste", "test@online.com");
+
+        // 1. Configura Mocks de Ambiente: Simula que há conexão
         when(mockConnectivityManager.getActiveNetworkInfo()).thenReturn(mockNetworkInfo);
-
-        authService = new AuthService(mockContext) {
-            // Sobrescreve as instâncias para usar os mocks
-            @Override
-            public void registerUser(String email, String password, String nome, AuthCallback callback) {
-                super.registerUser(email, password, nome, callback);
-            }
-
-            @Override
-            public void loginUser(String email, String password, AuthCallback callback) {
-                super.loginUser(email, password, callback);
-            }
-        };
-    }
-
-    // --- Testes para registerUser ---
-
-    @Test
-    public void registerUser_Success_CallbackSuccessCalled() {
-        // Configura mocks para um cenário de sucesso
-        when(mockFirebaseAuth.createUserWithEmailAndPassword(anyString(), anyString())).thenReturn(mockAuthTask);
-        when(mockAuthTask.isSuccessful()).thenReturn(true);
-        when(mockFirebaseAuth.getCurrentUser()).thenReturn(mockFirebaseUser);
-        when(mockFirebaseUser.getUid()).thenReturn("test-uid");
-        when(mockFirestore.collection(anyString())).thenReturn(mockCollectionReference);
-        when(mockCollectionReference.document(anyString())).thenReturn(mockDocumentReference);
-        when(mockDocumentReference.set(any(Usuario.class))).thenReturn(mockSetTask);
-        when(mockSetTask.isSuccessful()).thenReturn(true);
-
-        // Captura o listener de sucesso para simular a chamada
-        ArgumentCaptor<OnSuccessListener> successCaptor = ArgumentCaptor.forClass(OnSuccessListener.class);
-        doAnswer(invocation -> {
-            successCaptor.getValue().onSuccess(null);
-            return mockSetTask;
-        }).when(mockSetTask).addOnSuccessListener(successCaptor.capture());
-
-        // Executa o método a ser testado
-        authService.registerUser("test@example.com", "password123", "Test User", mockCallback);
-
-        // Verifica as interações
-        verify(mockAuthRepository).insertUser(any(Usuario.class));
-        verify(mockCallback).onSuccess(any(Usuario.class));
-        verify(mockCallback, never()).onFailure(anyString());
-    }
-
-    // --- Testes para loginUser ---
-
-    @Test
-    public void loginUser_Online_Success_CallbackSuccessCalled() {
-        // Simula a conexão com a internet
         when(mockNetworkInfo.isConnectedOrConnecting()).thenReturn(true);
 
-        // Configura mocks para login bem-sucedido
-        when(mockFirebaseAuth.signInWithEmailAndPassword(anyString(), anyString())).thenReturn(mockAuthTask);
-        when(mockAuthTask.isSuccessful()).thenReturn(true);
-        when(mockFirebaseAuth.getCurrentUser()).thenReturn(mockFirebaseUser);
-        when(mockFirebaseUser.getUid()).thenReturn("test-uid");
-        when(mockFirestore.collection(anyString())).thenReturn(mockCollectionReference);
-        when(mockCollectionReference.document(anyString())).thenReturn(mockDocumentReference);
-        when(mockDocumentReference.get()).thenReturn(mockFirestoreTask);
+        // Ação: Inicia o login
+        authService.loginUser(testUser.getEmail(), "senha123", mockCallback);
 
-        when(mockFirestoreTask.isSuccessful()).thenReturn(true);
+        // 2. Captura o Callback do Cloud (Firebase) e Simula Sucesso
+        // Verifica se o login foi chamado e captura o callback
+        verify(mockCloudDataSource).loginUser(eq(testUser.getEmail()), eq("senha123"), cloudCallbackCaptor.capture());
 
-        // Simula a resposta do Firestore
-        when(mockDocumentSnapshot.exists()).thenReturn(true);
-        Usuario expectedUser = new Usuario("Test Login", "login@example.com");
-        expectedUser.setUid("test-uid");
-        when(mockDocumentSnapshot.toObject(Usuario.class)).thenReturn(expectedUser);
+        // Simula o SUCESSO do Firebase (Passo GREEN do Cloud):
+        ICloudAuthDataSource.AuthResultCallback cloudCallback = cloudCallbackCaptor.getValue();
+        cloudCallback.onSuccess(mockFirebaseUser, testUser);
 
-        // Captura o listener de sucesso do Firestore
-        ArgumentCaptor<OnSuccessListener> successCaptor = ArgumentCaptor.forClass(OnSuccessListener.class);
-        doAnswer(invocation -> {
-            successCaptor.getValue().onSuccess(mockDocumentSnapshot);
-            return mockFirestoreTask;
-        }).when(mockFirestoreTask).addOnSuccessListener(successCaptor.capture());
+        // 3. Captura o Callback do Repositório (SQLite) e Simula Sucesso
+        // Verifica se a inserção local foi chamada após o sucesso do Cloud
+        verify(mockRepository).insertUser(eq(testUser), repositoryCallbackCaptor.capture());
 
-        authService.loginUser("login@example.com", "password123", mockCallback);
+        // Simula o SUCESSO do SQLite (Passo GREEN do Repositório):
+        IAuthRepository.InsertUserCallback repoCallback = repositoryCallbackCaptor.getValue();
+        repoCallback.onInsertComplete();
 
-        // Verifica se o repositório foi chamado e o callback de sucesso foi acionado
-        verify(mockAuthRepository).insertUser(any(Usuario.class));
-        verify(mockCallback).onSuccess(any(Usuario.class));
-        verify(mockCallback, never()).onFailure(anyString());
+        // 4. Verifica o Resultado Final
+        // O callback final deve ser chamado com sucesso, confirmando que o AuthService coordenou tudo
+        verify(mockCallback).onSuccess(testUser);
+        verify(mockCallback, never()).onFailure(anyString()); // Garante que a falha NÃO foi chamada
     }
 
     @Test
-    public void loginUser_Offline_LocalUserFound_CallbackSuccessCalled() {
-        // Simula a falta de conexão
-        when(mockNetworkInfo.isConnectedOrConnecting()).thenReturn(false);
+    public void testLogin_Online_CloudFailure() {
+        // ... (Configuração de conexão, similar ao anterior) ...
+        when(mockConnectivityManager.getActiveNetworkInfo()).thenReturn(mockNetworkInfo);
+        when(mockNetworkInfo.isConnectedOrConnecting()).thenReturn(true);
 
-        // Simula que o usuário foi encontrado no banco de dados local
-        Usuario localUser = new Usuario("Local User", "local@example.com");
-        when(mockAuthRepository.getUserByEmail(anyString())).thenReturn(localUser);
+        authService.loginUser("falha@nuvem.com", "senha123", mockCallback);
 
-        authService.loginUser("local@example.com", "password123", mockCallback);
+        verify(mockCloudDataSource).loginUser(anyString(), anyString(), cloudCallbackCaptor.capture());
 
-        // Verifica se a chamada ao Firebase foi ignorada e o callback local foi acionado
-        verify(mockFirebaseAuth, never()).signInWithEmailAndPassword(anyString(), anyString());
-        verify(mockAuthRepository).getUserByEmail("local@example.com");
+        // Simula a FALHA do Cloud (Firebase)
+        cloudCallbackCaptor.getValue().onFailure("Credenciais inválidas.");
+
+        // Verifica o Resultado Final: a falha do Cloud deve ser repassada
+        verify(mockCallback).onFailure(eq("Credenciais inválidas."));
+        verify(mockCallback, never()).onSuccess(any());
+
+        // Garante que o Repositório local nunca foi chamado
+        verify(mockRepository, never()).insertUser(any(), any());
+    }
+
+    // --- CENÁRIOS OFFLINE ---
+
+    @Test
+    public void testLogin_Offline_UserFoundLocally() {
+        Usuario localUser = new Usuario("Local", "local@teste.com");
+
+        // 1. Configura Mocks de Ambiente: Simula que NÃO há conexão
+        when(mockConnectivityManager.getActiveNetworkInfo()).thenReturn(null);
+
+        authService.loginUser(localUser.getEmail(), "qualquer_senha", mockCallback);
+
+        // 2. Captura o Callback do Repositório (SQLite) e Simula Sucesso
+        verify(mockRepository).getUserByEmail(eq(localUser.getEmail()), any(IAuthRepository.GetUserCallback.class));
+
+        // Simula o SUCESSO do Repositório (Passo GREEN do SQLite):
+        // Neste ponto, você precisa simular que o repositório encontrou o usuário
+        ArgumentCaptor<IAuthRepository.GetUserCallback> repoGetCallbackCaptor = ArgumentCaptor.forClass(IAuthRepository.GetUserCallback.class);
+        verify(mockRepository).getUserByEmail(anyString(), repoGetCallbackCaptor.capture());
+        repoGetCallbackCaptor.getValue().onUserFound(localUser);
+
+        // 3. Verifica o Resultado Final
+        // O callback final deve ser sucesso
         verify(mockCallback).onSuccess(localUser);
+        verify(mockCallback, never()).onFailure(anyString());
+
+        // Garante que o Cloud NUNCA foi chamado
+        verify(mockCloudDataSource, never()).loginUser(anyString(), anyString(), any());
     }
 }

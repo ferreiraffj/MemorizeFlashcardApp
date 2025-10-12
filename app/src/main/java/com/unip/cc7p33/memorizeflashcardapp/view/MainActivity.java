@@ -150,7 +150,6 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.action_logout) {
             authService.logout();
-//            authService.clearLocalData();
             Toast.makeText(this, "Você saiu da sua conta.", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(MainActivity.this, LoginActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

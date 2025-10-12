@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.firebase.storage)
     implementation(libs.firebase.firestore)
+    implementation(libs.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
@@ -70,6 +71,13 @@ dependencies {
 
     // Para testes do Room
     androidTestImplementation("androidx.room:room-testing:2.6.1")
+
+    // Testes de Instrumentação
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // Firebase Emulator Test Helper (dependência crucial para testes locais)
+    androidTestImplementation("com.google.firebase:firebase-auth-interop:19.0.0") // Versão pode variar
 
     // Para testes de corrotinas
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")

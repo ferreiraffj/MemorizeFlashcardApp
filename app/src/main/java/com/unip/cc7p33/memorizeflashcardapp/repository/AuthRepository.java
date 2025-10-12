@@ -7,20 +7,10 @@ import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class AuthRepository {
+public class AuthRepository implements IAuthRepository {
 
     private UsuarioDAO usuarioDao;
     private final ExecutorService executor;
-
-    public interface GetUserCallback {
-        void onUserFound(Usuario usuario);
-        void onUserNotFound();
-    }
-
-    // Novo callback para a inserção
-    public interface InsertUserCallback {
-        void onInsertComplete();
-    }
 
     public AuthRepository(Context context) {
         AppDatabase db = AppDatabase.getDatabase(context);
