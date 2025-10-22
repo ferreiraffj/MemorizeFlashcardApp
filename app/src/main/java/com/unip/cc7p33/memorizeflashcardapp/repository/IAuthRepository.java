@@ -2,7 +2,6 @@ package com.unip.cc7p33.memorizeflashcardapp.repository;
 
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 
-// Interface IAuthRepository
 public interface IAuthRepository {
 
     interface GetUserCallback {

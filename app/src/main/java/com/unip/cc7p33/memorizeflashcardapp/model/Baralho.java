@@ -18,7 +18,7 @@ public class Baralho {
     @PrimaryKey
     @DocumentId
     @NonNull
-    private String id;
+    private String baralhoId;
 
     @ColumnInfo(name = "nome")
     private String nome;
@@ -32,7 +32,7 @@ public class Baralho {
 
     public Baralho() {
 
-        this.id = "";
+        this.baralhoId = "";
     }
 
     @Ignore
@@ -45,8 +45,8 @@ public class Baralho {
 
 
     @NonNull
-    public String getId() { return id; }
-    public void setId(@NonNull String id) { this.id = id; }
+    public String getBaralhoId() { return baralhoId; }  // Correção: de getId para getBaralhoId
+    public void setBaralhoId(@NonNull String baralhoId) { this.baralhoId = baralhoId; }  // Correção: de setId para setBaralhoId
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     public int getQuantidadeCartas() { return quantidadeCartas; }
