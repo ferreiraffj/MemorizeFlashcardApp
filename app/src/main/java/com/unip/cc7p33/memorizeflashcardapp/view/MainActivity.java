@@ -1,12 +1,16 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -23,9 +27,11 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.adapter.BaralhoAdapter;
+import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService;
+import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,14 +49,30 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
 
     private AuthService authService;
     private BaralhoService baralhoService;
+    private FlashcardService flashcardService;  // Adicionado: para sincronização
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Para Android 11+ (API 30+): Usa WindowInsetsController para ocultar a barra de status
+            getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.statusBars());
+            }
+        } else {
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
+
         authService = new AuthService(this);
         baralhoService = new BaralhoService();
+        baralhoService.setBaralhoDAO(AppDatabase.getInstance(this).baralhoDAO());
+        flashcardService = new FlashcardService();
+        flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
 
         Toolbar toolbar = findViewById(R.id.toolbar_main);
         setSupportActionBar(toolbar);
@@ -76,16 +98,14 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         });
     }
 
-    // --- INÍCIO DA ALTERAÇÃO (PASSO 1.3) ---
     @Override
     protected void onResume() {
         super.onResume();
         // Carrega os dados do Firestore sempre que a tela se torna visível/ativa
-        carregarBaralhosDoFirestore();
+        carregarBaralhos();
     }
-    // --- FIM DA ALTERAÇÃO ---
 
-    private void carregarBaralhosDoFirestore() {
+    private void carregarBaralhos() {
         FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
@@ -93,18 +113,23 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         noDecksMessage.setVisibility(View.GONE);
         recyclerView.setVisibility(View.GONE);
 
-        baralhoService.getBaralhos(currentUser.getUid())
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        listaDeBaralhos.clear();
-                        listaDeBaralhos.addAll(task.getResult().toObjects(Baralho.class));
-                        baralhoAdapter.notifyDataSetChanged();
-                        updateNoDecksMessageVisibility();
-                    } else {
-                        Log.e("MainActivity", "Erro ao buscar baralhos.", task.getException());
-                        Toast.makeText(MainActivity.this, "Erro ao buscar baralhos.", Toast.LENGTH_SHORT).show();
-                    }
+        baralhoService.getBaralhos(currentUser.getUid(), new BaralhoService.OnCompleteListener<List<Baralho>>() {
+            @Override
+            public void onSuccess(List<Baralho> baralhos) {
+                listaDeBaralhos.clear();
+                listaDeBaralhos.addAll(baralhos);
+                baralhoAdapter.notifyDataSetChanged();
+                updateNoDecksMessageVisibility();
+                flashcardService.syncExistingDataToRoom(currentUser.getUid(), () -> {
+                    Log.d("MainActivity", "Sincronização de dados antigos concluída.");
                 });
+            }
+            @Override
+            public void onFailure(Exception e) {
+                Log.e("MainActivity", "Erro ao buscar baralhos.", e);
+                Toast.makeText(MainActivity.this, "Erro ao buscar baralhos.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showCreateDeckDialog() {
@@ -115,26 +140,27 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
 
         builder.setView(dialogView)
                 .setPositiveButton("Ok", (dialog, id) -> {
-                    String deckName = editTextDeckName.getText().toString().trim();
-                    FirebaseUser currentUser = authService.getCurrentUser();
-
-                    if (!deckName.isEmpty() && currentUser != null) {
-                        Baralho novoBaralho = new Baralho(deckName, 0, currentUser.getUid());
-
-                        baralhoService.criarBaralho(novoBaralho)
-                                .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(this, "Baralho '" + deckName + "' criado!", Toast.LENGTH_SHORT).show();
-                                    carregarBaralhosDoFirestore();
-                                })
-                                .addOnFailureListener(e -> {
-                                    Toast.makeText(this, "Erro ao criar baralho.", Toast.LENGTH_SHORT).show();
-                                    Log.e("MainActivity", "Erro ao criar baralho", e);
-                                });
-                    } else {
-                        Toast.makeText(this, "O nome do baralho não pode ser vazio.", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancelar", (dialog, id) -> dialog.dismiss());
+                String deckName = editTextDeckName.getText().toString().trim();
+                FirebaseUser currentUser = authService.getCurrentUser();
+                if (!deckName.isEmpty() && currentUser != null) {
+                    Baralho novoBaralho = new Baralho(deckName, 0, currentUser.getUid());
+                    // Use o listener da BaralhoService
+                    baralhoService.criarBaralho(novoBaralho, currentUser.getUid(), new BaralhoService.OnCompleteListener<Baralho>() {
+                        @Override
+                        public void onSuccess(Baralho baralho) {
+                            Toast.makeText(MainActivity.this, "Baralho '" + deckName + "' criado!", Toast.LENGTH_SHORT).show();
+                            carregarBaralhos();  // Recarrega após sucesso
+                        }
+                        @Override
+                        public void onFailure(Exception e) {
+                            Toast.makeText(MainActivity.this, "Erro ao criar baralho.", Toast.LENGTH_SHORT).show();
+                            Log.e("MainActivity", "Erro ao criar baralho", e);
+                        }
+                    });
+                } else {
+                    Toast.makeText(MainActivity.this, "O nome do baralho não pode ser vazio.", Toast.LENGTH_SHORT).show();
+                }
+        });
 
         AlertDialog alertDialog = builder.create();
         alertDialog.show();
@@ -186,7 +212,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
             ArrayList<String> deckIds = new ArrayList<>();
             for (Baralho baralho : listaDeBaralhos) {
                 deckNames.add(baralho.getNome());
-                deckIds.add(baralho.getId());
+                deckIds.add(baralho.getBaralhoId());
             }
             Intent intent = new Intent(MainActivity.this, AddCardActivity.class);
             intent.putStringArrayListExtra("DECK_NAMES", deckNames);
@@ -226,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     @Override
     public void onItemClick(Baralho baralho) {
         Intent intent = new Intent(MainActivity.this, CardListActivity.class);
-        intent.putExtra("DECK_ID", baralho.getId());
+        intent.putExtra("DECK_ID", baralho.getBaralhoId());
         intent.putExtra("DECK_NAME", baralho.getNome());
         startActivity(intent);
     }

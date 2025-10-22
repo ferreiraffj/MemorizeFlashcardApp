@@ -1,10 +1,14 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -16,6 +20,7 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
+import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService;
@@ -44,8 +49,21 @@ public class AddCardActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_card);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Para Android 11+ (API 30+): Usa WindowInsetsController para ocultar a barra de status
+            getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.statusBars());
+            }
+        } else {
+            // Para versões anteriores: Usa flags de janela para tela cheia
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
 
         flashcardService = new FlashcardService();
+        flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());  // Adicionado: configura DAO
+
         authService = new AuthService(this);
 
         Toolbar toolbar = findViewById(R.id.toolbar_add_card);
@@ -134,20 +152,25 @@ public class AddCardActivity extends AppCompatActivity {
         }
 
         String userId = currentUser.getUid();
-        Flashcard card = new Flashcard(frontText, backText, "Padrão");
+        Flashcard card;
 
         if (isEditMode) {
             // Lógica de ATUALIZAÇÃO
-            card.setId(editingCardId);
-            flashcardService.updateCarta(userId, currentDeckId, card)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Carta atualizada com sucesso!", Toast.LENGTH_SHORT).show();
-                        finish();
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this, "Erro ao atualizar a carta.", Toast.LENGTH_SHORT).show();
-                        Log.e("AddCardActivity", "Erro ao atualizar carta", e);
-                    });
+            card = new Flashcard(frontText, backText, currentDeckId);  // Instancia com dados atuais
+            card.setFlashcardId(Integer.parseInt(editingCardId));
+            card.setDeckId(currentDeckId);  // Adicione deckId para edição
+            flashcardService.updateCarta(userId, currentDeckId, card, new FlashcardService.OnCompleteListener<Flashcard>() {
+                @Override
+                public void onSuccess(Flashcard result) {
+                    Toast.makeText(AddCardActivity.this, "Carta atualizada com sucesso!", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    Toast.makeText(AddCardActivity.this, "Erro ao atualizar a carta.", Toast.LENGTH_SHORT).show();
+                    Log.e("AddCardActivity", "Erro ao atualizar carta", e);
+                }
+            });
         } else {
             // Lógica de CRIAÇÃO
             if (deckIds == null || deckIds.isEmpty()) {
@@ -157,19 +180,27 @@ public class AddCardActivity extends AppCompatActivity {
             int selectedDeckPosition = spinnerDecks.getSelectedItemPosition();
             String selectedDeckId = deckIds.get(selectedDeckPosition);
 
-            flashcardService.adicionarCarta(userId, selectedDeckId, card)
-                    .addOnSuccessListener(documentReference -> {
-                        // --- ALTERAÇÃO APLICADA AQUI ---
-                        new BaralhoService().incrementarContagem(userId, selectedDeckId)
-                                .addOnCompleteListener(task -> {
-                                    Toast.makeText(this, "Carta salva com sucesso!", Toast.LENGTH_SHORT).show();
-                                    finish();
-                                });
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this, "Erro ao salvar a carta.", Toast.LENGTH_SHORT).show();
-                        Log.e("AddCardActivity", "Erro ao salvar carta", e);
-                    });
+            card = new Flashcard(frontText, backText, selectedDeckId);  // Instancia com selectedDeckId
+
+            flashcardService.adicionarCarta(userId, selectedDeckId, card, new FlashcardService.OnCompleteListener<Flashcard>() {
+                @Override
+                public void onSuccess(Flashcard result) {
+                    new BaralhoService().incrementarContagem(userId, selectedDeckId)
+                            .addOnCompleteListener(task -> {
+                                Toast.makeText(AddCardActivity.this, "Carta salva com sucesso!", Toast.LENGTH_SHORT).show();
+                                finish();
+                            });
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    Toast.makeText(AddCardActivity.this, "Erro ao salvar a carta.", Toast.LENGTH_SHORT).show();
+                    Log.e("AddCardActivity", "Erro ao salvar carta", e);
+                }
+            });
         }
     }
+
+
+
+
 }

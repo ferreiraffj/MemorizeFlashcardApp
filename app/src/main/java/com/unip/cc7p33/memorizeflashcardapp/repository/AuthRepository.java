@@ -1,6 +1,8 @@
 package com.unip.cc7p33.memorizeflashcardapp.repository;
 
 import android.content.Context;
+import android.util.Log;
+
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
 import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
@@ -13,16 +15,22 @@ public class AuthRepository implements IAuthRepository {
     private final ExecutorService executor;
 
     public AuthRepository(Context context) {
-        AppDatabase db = AppDatabase.getDatabase(context);
-        usuarioDao = db.usuarioDao();
+        AppDatabase db = AppDatabase.getInstance(context);  // Correção: de getDatabase para getInstance
+        usuarioDao = db.usuarioDAO();  // Correção: de usuarioDao para usuarioDAO
         executor = Executors.newSingleThreadExecutor();
     }
 
     // Insere um usuário no banco de dados local com callback
     public void insertUser(Usuario usuario, InsertUserCallback callback) {
+        Log.d("AuthRepository", "Inserindo usuário no banco local: " + usuario.getEmail());
         executor.execute(() -> {
-            usuarioDao.insertUser(usuario);
-            callback.onInsertComplete();
+            try {
+                usuarioDao.insertUser(usuario);
+                Log.d("AuthRepository", "Usuário inserido com sucesso: " + usuario.getEmail());
+                callback.onInsertComplete();
+            } catch (Exception e){
+                Log.e("AuthRepository", "Erro ao inserir usuário: " + e.getMessage());
+            }
         });
     }
 

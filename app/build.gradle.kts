@@ -49,7 +49,6 @@ dependencies {
     implementation(libs.lifecycle.livedata.ktx)
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.firebase.storage)
-    implementation(libs.firebase.firestore)
     implementation(libs.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
@@ -82,3 +81,4 @@ dependencies {
     // Para testes de corrotinas
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
 }
+
