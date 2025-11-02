@@ -30,4 +30,7 @@ public interface FlashcardDAO {
 
     @Query("SELECT * FROM flashcard")
     List<Flashcard> getAll();
+
+    @Query("SELECT * FROM flashcard WHERE deckId = :deckId AND (repeticoes = 0 OR proximaRevisao <= :now)")
+    List<Flashcard> getCardsForStudy(String deckId, long now);
 }

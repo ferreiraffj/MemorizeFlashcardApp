@@ -30,6 +30,7 @@ import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -83,14 +84,20 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
 
         FloatingActionButton fabStartStudy = findViewById(R.id.fab_start_study);
         fabStartStudy.setOnClickListener(v -> {
-            if (cardList != null && !cardList.isEmpty()) {
-                Intent intent = new Intent(CardListActivity.this, SessaoEstudoActivity.class);
-                intent.putExtra("CARD_LIST", (Serializable) cardList);
-                intent.putExtra("DECK_NAME", getIntent().getStringExtra("DECK_NAME"));
-                startActivity(intent);
-            } else {
-                Toast.makeText(this, "Não há cartas para estudar neste baralho.", Toast.LENGTH_SHORT).show();
-            }
+            Executors.newSingleThreadExecutor().execute(() -> {
+                long now = new Date().getTime();
+                List<Flashcard> cardsForStudy = flashcardDAO.getCardsForStudy(deckId, now);  // Nova query
+                runOnUiThread(() -> {
+                    if (cardsForStudy != null && !cardsForStudy.isEmpty()) {
+                        Intent intent = new Intent(CardListActivity.this, SessaoEstudoActivity.class);
+                        intent.putExtra("CARD_LIST", (Serializable) cardsForStudy);  // Envia apenas as filtradas
+                        intent.putExtra("DECK_NAME", getIntent().getStringExtra("DECK_NAME"));
+                        startActivity(intent);
+                    } else {
+                        Toast.makeText(CardListActivity.this, "Nenhuma carta para estudar hoje! Todas estão em dia ou o baralho está vazio.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            });
         });
     }
 

@@ -27,8 +27,9 @@ public class SessaoEstudoActivity extends AppCompatActivity {
     private TextView textViewCardContent, textViewShowAnswer, textViewScore;
     private CardView cardViewFlashcard;
     private LinearLayout layoutAssessment, layoutSessionFinished;
-
     private SessaoEstudoService service;
+    private long startTime;  // Novo: para medir tempo
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,10 +107,18 @@ public class SessaoEstudoActivity extends AppCompatActivity {
             textViewCardContent.setText(card.getVerso());
             textViewShowAnswer.setVisibility(View.GONE);
             layoutAssessment.setVisibility(View.VISIBLE);
+            startTime = System.currentTimeMillis();  // Inicia timer
         }
     }
 
-    private void nextCard(int quality) {  // Mudança: recebe quality em vez de boolean
+    private void nextCard(int quality) {
+        long responseTime = System.currentTimeMillis() - startTime;  // Calcula tempo de resposta
+        Flashcard card = service.obterCartaAtual();
+        if (card != null) {
+            // Atualiza o tempo médio
+            long currentAvg = card.getTempoRespostaMedio();
+            card.setTempoRespostaMedio((currentAvg + responseTime) / 2); // Média simples;
+        }
         service.avancarCarta(quality);
         displayCurrentCard();
     }

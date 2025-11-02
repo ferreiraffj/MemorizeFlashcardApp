@@ -17,12 +17,22 @@ public class Flashcard implements Serializable {
     private String verso;
     private String deckId;  // Novo: associa carta ao deck
 
+     // Campo para calcular status da revisao
+    public enum Status { NOVA, PROXIMA, ERRADA}
+    public Status getStatus() {
+        if (getErros() > 0) return Status.ERRADA;
+        if (getProximaRevisao() != null && getProximaRevisao().before(new Date())) return Status.PROXIMA;  // Próxima revisão vencida
+        return Status.NOVA;
+    }
+
 
     // Campos para SM2
     private int repeticoes = 0;
     private double facilidade = 2.5;
     private int intervalo = 1;
     private Date proximaRevisao;
+    private long tempoRespostaMedio = 0;
+
 
     // Campos para métricas básicas
     private int acertos = 0;
@@ -49,6 +59,7 @@ public class Flashcard implements Serializable {
     public String getVerso() { return verso; }
     public void setVerso(String verso) { this.verso = verso; }
 
+
     public String getDeckId() { return deckId; }  // Novo
     public void setDeckId(String deckId) { this.deckId = deckId; }  // Novo
 
@@ -63,6 +74,9 @@ public class Flashcard implements Serializable {
 
     public Date getProximaRevisao() { return proximaRevisao; }
     public void setProximaRevisao(Date proximaRevisao) { this.proximaRevisao = proximaRevisao; }
+
+    public long getTempoRespostaMedio() { return tempoRespostaMedio; }
+    public void setTempoRespostaMedio(long tempo) { this.tempoRespostaMedio = tempo; }
 
     public int getAcertos() { return acertos; }
     public void setAcertos(int acertos) { this.acertos = acertos; }

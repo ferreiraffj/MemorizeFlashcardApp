@@ -4,9 +4,11 @@ import com.unip.cc7p33.memorizeflashcardapp.database.FlashcardDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class SessaoEstudoService {
 
@@ -22,9 +24,14 @@ public class SessaoEstudoService {
 
     // Inicia a sessão com a lista de cartas (shuffle incluído)
     public void iniciarSessao(List<Flashcard> cards) {
-        this.cardList = cards;
+        // Filtrar apenas cartas para estudo (novas ou vencidas)
+        long now = new Date().getTime();
+        this.cardList = cards.stream()
+                .filter(card -> card.getRepeticoes() == 0 || (card.getProximaRevisao() != null && card.getProximaRevisao().getTime() <= now))
+                .collect(Collectors.toList());
+
         if (cardList != null && !cardList.isEmpty()) {
-            Collections.shuffle(cardList);
+            Collections.shuffle(cardList);  // Shuffle apenas as cartas do dia
             currentCardIndex = 0;
             correctAnswersCount = 0;
         }

@@ -27,4 +27,16 @@ public interface BaralhoDAO {
 
     @Query("DELETE FROM baralhos WHERE baralhoId = :id")
     void deleteById(String id);
+
+    @Query("SELECT COUNT(*) FROM flashcard WHERE deckId = :deckId AND erros > 0")
+    int getErradasCount(String deckId);
+
+    @Query("SELECT COUNT(*) FROM flashcard WHERE deckId = :deckId AND proximaRevisao IS NOT NULL AND proximaRevisao < :now")
+    int getProximasCount(String deckId, long now);  // Só vencidas
+
+    @Query("SELECT COUNT(*) FROM flashcard WHERE deckId = :deckId AND erros = 0 AND (proximaRevisao IS NULL OR proximaRevisao >= :now)")
+    int getNovasCount(String deckId, long now);  // Sem erros e não vencidas
+
+    @Query("SELECT COUNT(*) FROM flashcard WHERE deckId = :deckId AND repeticoes = 0")
+    int getNovasCount(String deckId);  // Apenas novas (nunca revisadas)
 }

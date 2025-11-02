@@ -17,13 +17,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.adapter.BaralhoAdapter;
@@ -35,6 +39,7 @@ import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity implements BaralhoAdapter.OnItemClickListener {
 
@@ -85,17 +90,44 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         noDecksMessage = findViewById(R.id.text_view_no_decks_message);
 
         listaDeBaralhos = new ArrayList<>();
-        baralhoAdapter = new BaralhoAdapter(listaDeBaralhos);
+        baralhoAdapter = new BaralhoAdapter(listaDeBaralhos, AppDatabase.getInstance(this).baralhoDAO());
         baralhoAdapter.setOnItemClickListener(this);
         recyclerView.setAdapter(baralhoAdapter);
 
-        // A chamada para carregar os dados foi MOVIDA daqui para o onResume()
+        DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
+        NavigationView navigationView = findViewById(R.id.nav_view);
 
+        // Configura o toggle para o botão esquerdo abrir/fechar o Drawer
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawerLayout, toolbar,
+                R.string.navigation_drawer_open,  // Strings de acessibilidade (adicione no strings.xml)
+                R.string.navigation_drawer_close
+        );
+        drawerLayout.addDrawerListener(toggle);
+        toggle.syncState();
+
+        // Trata cliques no menu lateral
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_perfil) {
+                // Abrir Activity de Perfil (implementar depois)
+                Toast.makeText(this, "Perfil clicado", Toast.LENGTH_SHORT).show();
+            } else if (id == R.id.nav_dashboards) {
+                // Abrir Dashboards
+                Intent intent = new Intent(this, DashboardActivity.class);
+                startActivity(intent);
+            } else if (id == R.id.nav_ajuda) {
+                // Abrir Ajuda (futura)
+                Toast.makeText(this, "Ajuda - Em breve!", Toast.LENGTH_SHORT).show();
+            }
+            drawerLayout.closeDrawer(GravityCompat.START);  // Fecha o Drawer após clique
+            return true;
+        });
         setupFabs();
 
-        toolbar.setNavigationOnClickListener(v -> {
-            Toast.makeText(this, "Ícone de Menu clicado!", Toast.LENGTH_SHORT).show();
-        });
+//        toolbar.setNavigationOnClickListener(v -> {
+//            Toast.makeText(this, "Ícone de Menu clicado!", Toast.LENGTH_SHORT).show();
+//        });
     }
 
     @Override
@@ -251,6 +283,12 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
 
     @Override
     public void onItemClick(Baralho baralho) {
+        // Incrementa visitas
+        baralho.setVisitas(baralho.getVisitas() + 1);
+        Executors.newSingleThreadExecutor().execute(() ->
+                AppDatabase.getInstance(this).baralhoDAO().update(baralho)
+        );
+
         Intent intent = new Intent(MainActivity.this, CardListActivity.class);
         intent.putExtra("DECK_ID", baralho.getBaralhoId());
         intent.putExtra("DECK_NAME", baralho.getNome());
