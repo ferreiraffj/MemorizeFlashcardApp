@@ -5,6 +5,8 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import com.google.firebase.firestore.DocumentId;
 
+import java.util.Date;
+
 @Entity(tableName = "usuario")
 public class Usuario {
     @PrimaryKey
@@ -13,6 +15,8 @@ public class Usuario {
     private String uid; // ID do usuário, que será o mesmo do Firebase Auth
     private String nome;
     private String email;
+    private int diasConsecutivos;
+    private Date ultimoAcesso;
 
     public Usuario() {
         // Construtor padrão necessário para o Firestore
@@ -46,4 +50,8 @@ public class Usuario {
     public void setEmail(String email) {
         this.email = email;
     }
+    public int getDiasConsecutivos() { return diasConsecutivos; }
+    public void setDiasConsecutivos(int diasConsecutivos) { this.diasConsecutivos = diasConsecutivos; }
+    public Date getUltimoAcesso() { return ultimoAcesso; }
+    public void setUltimoAcesso(Date ultimoAcesso) { this.ultimoAcesso = ultimoAcesso; }
 }

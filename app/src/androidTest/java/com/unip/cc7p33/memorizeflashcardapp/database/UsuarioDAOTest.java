@@ -29,7 +29,7 @@ public class UsuarioDAOTest {
     public void createDb(){
         Context context = ApplicationProvider.getApplicationContext();
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase.class).build();
-        usuarioDao = db.usuarioDao();
+        usuarioDao = db.usuarioDAO();
     }
 
     @After

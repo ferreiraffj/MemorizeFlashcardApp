@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_perfil"
+        android:title="Perfil" />
+    <item
+        android:id="@+id/nav_dashboards"
+        android:title="Dashboards" />
+    <item
+        android:id="@+id/nav_ajuda"
+        android:title="Ajuda" />
+</menu>

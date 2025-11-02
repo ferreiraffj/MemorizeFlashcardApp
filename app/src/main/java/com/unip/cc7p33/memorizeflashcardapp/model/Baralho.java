@@ -29,9 +29,9 @@ public class Baralho {
     @ColumnInfo(name = "usuario_id", index = true)
     private String usuarioId;
 
+    private int visitas;
 
     public Baralho() {
-
         this.baralhoId = "";
     }
 
@@ -41,6 +41,7 @@ public class Baralho {
         this.nome = nome;
         this.quantidadeCartas = quantidadeCartas;
         this.usuarioId = usuarioId;
+        this.visitas = 0;
     }
 
 
@@ -53,4 +54,6 @@ public class Baralho {
     public void setQuantidadeCartas(int quantidadeCartas) { this.quantidadeCartas = quantidadeCartas; }
     public String getUsuarioId() { return usuarioId; }
     public void setUsuarioId(String usuarioId) { this.usuarioId = usuarioId; }
+    public int getVisitas() { return visitas; }
+    public void setVisitas(int visitas) { this.visitas = visitas; }
 }
