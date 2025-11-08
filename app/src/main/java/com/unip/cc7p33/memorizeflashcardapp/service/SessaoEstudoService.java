@@ -1,13 +1,17 @@
 package com.unip.cc7p33.memorizeflashcardapp.service;
 
 import android.content.Context;
+import android.util.Log;
 
+import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
 import com.unip.cc7p33.memorizeflashcardapp.database.FlashcardDAO;
 import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.model.RankingInfo;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
+import com.unip.cc7p33.memorizeflashcardapp.repository.FirebaseAuthDataSource;
+import com.unip.cc7p33.memorizeflashcardapp.repository.ICloudAuthDataSource;
 
 import java.util.Calendar;
 import java.util.Collections;
@@ -26,9 +30,12 @@ public class SessaoEstudoService {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();  // Para operações assíncronas
     private boolean estudouHoje = false;
     private Context context;  // Novo: para acessar AppDatabase
+    private ICloudAuthDataSource cloudAuthDataSource;
 
     public void setContext(Context context) {
         this.context = context;
+        // Instancia o data source da nuvem quando o contexto é definido
+        this.cloudAuthDataSource = new FirebaseAuthDataSource();
     }
 
     public void setFlashcardDAO(FlashcardDAO dao) {
@@ -174,37 +181,34 @@ public class SessaoEstudoService {
                 usuario.setXp(usuario.getXp() + xpGanho);
                 usuario.setRanking(SessaoEstudoService.getRankingInfo(usuario.getXp()).getCurrentRankName());
 
-                // A verificação se a ofensiva deve ser incrementada
+                // 1. Verifica se a ofensiva deve ser incrementada (usando o metodo correto)
                 if (!SessaoEstudoService.jaEstudouHoje(usuario.getUltimoEstudo())) {
                     usuario.setOfensiva(usuario.getOfensiva() + 1);
                 }
 
+                // 2. Prepara a data de hoje para ser salva
                 Calendar hojeInicioDoDia = Calendar.getInstance();
                 hojeInicioDoDia.set(Calendar.HOUR_OF_DAY, 0);
                 hojeInicioDoDia.set(Calendar.MINUTE, 0);
                 hojeInicioDoDia.set(Calendar.SECOND, 0);
                 hojeInicioDoDia.set(Calendar.MILLISECOND, 0);
+
+                // 3. Atualiza a data do último estudo para HOJE (uma única vez)
                 usuario.setUltimoEstudo(hojeInicioDoDia.getTime());
 
-                // Pega a data do último estudo do usuário. Se nunca estudou, será null.
-                Date ultimoEstudo = usuario.getUltimoEstudo();
-
-                /*
-                * Verifica se a ofensiva deve ser incrementada
-                * Condições:
-                * 1. O usuário NUNCA estudou antes (ultimoEstudo == null)
-                * 2. O último estudo foi ANTES do início do dia de hoje
-                * */
-                if (ultimoEstudo == null || ultimoEstudo.before(hojeInicioDoDia.getTime())) {
-                    // Este é o primeiro estudo de hoje, então incrementa a ofensiva.
-                    usuario.setOfensiva(usuario.getOfensiva() + 1);
-                }
-
-                // Atualiza a data do último estudo para o início do dia de hoje.
-                // Salvar a data zerada garante que qualquer estudo futuro no mesmo dia não incremente a ofensiva novamente.
-                usuario.setUltimoEstudo(hojeInicioDoDia.getTime());
-
+                // 4. Atualiza o banco de dados local
                 usuarioDAO.update(usuario);
+
+                // 5. Salva na nuvem
+                if (cloudAuthDataSource != null) {
+                    cloudAuthDataSource.updateUser(usuario, new ICloudAuthDataSource.AuthResultCallback(){
+                        @Override
+                        public void onSuccess(FirebaseUser user, Usuario userData){}
+                        @Override
+                        public void onFailure(String errorMessage){}
+                    });
+                    Log.d("SessaoEstudoService", "Usuário atualizado no Firestore com sucesso: " + usuario.getUid());
+                }
             }
             estudouHoje = false; // Reseta para a próxima sessão
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {

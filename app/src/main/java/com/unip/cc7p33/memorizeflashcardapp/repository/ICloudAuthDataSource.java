@@ -14,6 +14,7 @@ public interface ICloudAuthDataSource {
     void registerUser(String email, String password, String nome, AuthResultCallback callback);
     void loginUser(String email, String password, AuthResultCallback callback);
     void resetPassword(String email, AuthResultCallback callback);
+    void updateUser(Usuario usuario, AuthResultCallback callback);
 
     // Métodos utilitários
     FirebaseUser getCurrentUser();
