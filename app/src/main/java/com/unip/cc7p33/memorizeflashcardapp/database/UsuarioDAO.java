@@ -4,6 +4,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Update;
 
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 
@@ -12,6 +13,10 @@ public interface UsuarioDAO {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertUser(Usuario usuario);
+
+    @Update
+        // Novo: para atualizar usuário
+    void update(Usuario usuario);
 
     @Query("SELECT * FROM usuario WHERE uid = :uid LIMIT 1")
     Usuario getUserByUID(String uid);

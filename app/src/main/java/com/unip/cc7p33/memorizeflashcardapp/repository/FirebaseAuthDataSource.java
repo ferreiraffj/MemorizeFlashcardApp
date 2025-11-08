@@ -1,9 +1,18 @@
 package com.unip.cc7p33.memorizeflashcardapp.repository;
 
+import android.util.Log;
+
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
+import com.google.firebase.auth.FirebaseAuthInvalidUserException;
+import com.google.firebase.auth.FirebaseAuthUserCollisionException;
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
+
+import java.util.Date;
+import java.util.concurrent.Executors;
 
 public class FirebaseAuthDataSource implements ICloudAuthDataSource {
     private FirebaseAuth mAuth;
@@ -21,8 +30,16 @@ public class FirebaseAuthDataSource implements ICloudAuthDataSource {
                     if (task.isSuccessful()) {
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
-                            Usuario novoUsuario = new Usuario(nome, email);
+                            Usuario novoUsuario = new Usuario();
                             novoUsuario.setUid(firebaseUser.getUid());
+                            novoUsuario.setNome(nome);
+                            novoUsuario.setEmail(email);
+                            novoUsuario.setDiasConsecutivos(0);
+                            novoUsuario.setUltimoAcesso(new Date());
+                            novoUsuario.setXp(0);
+                            novoUsuario.setRanking("Bronze");
+                            novoUsuario.setOfensiva(0);
+                            novoUsuario.setUltimoEstudo(null);
 
                             // Salva os dados do usuário no Firestore
                             db.collection("users").document(firebaseUser.getUid())
@@ -35,11 +52,28 @@ public class FirebaseAuthDataSource implements ICloudAuthDataSource {
                                         callback.onFailure("Erro ao salvar os dados do usuário: " + e.getMessage());
                                     });
                         } else {
-                            callback.onFailure("Usuário não encontrado após o registro.");
+                            callback.onFailure("Usuário não encontrado após o registro bem-sucedido.");
                         }
                     } else {
-                        callback.onFailure(task.getException() != null ?
-                                task.getException().getMessage() : "Erro desconhecido no registro");
+                        String errorMessage;
+                        try {
+                            // Lança a exceção para ser capturada pelos blocos catch
+                            throw task.getException();
+                        } catch (FirebaseAuthWeakPasswordException e) {
+                            // Captura erro de senha fraca
+                            errorMessage = "A senha deve ter no mínimo 6 caracteres.";
+                        } catch (FirebaseAuthInvalidCredentialsException e) {
+                            // Captura erro de e-mail inválido
+                            errorMessage = "O formato do e-mail é inválido.";
+                        } catch (FirebaseAuthUserCollisionException e) {
+                            // Captura erro de e-mail já existente
+                            errorMessage = "Este e-mail já está em uso por outra conta.";
+                        } catch (Exception e) {
+                            // Para qualquer outro erro
+                            Log.e("FirebaseAuthDataSource", "Erro não tratado no registro: ", e);
+                            errorMessage = "Ocorreu um erro ao registrar. Tente novamente.";
+                        }
+                        callback.onFailure(errorMessage);
                     }
                 });
     }
@@ -73,8 +107,23 @@ public class FirebaseAuthDataSource implements ICloudAuthDataSource {
                             callback.onFailure("Usuário não encontrado após o login.");
                         }
                     } else {
-                        callback.onFailure(task.getException() != null ?
-                                task.getException().getMessage() : "Erro desconhecido no login.");
+                        String errorMessage;
+                        try {
+                            // Lança a exceção para ser capturada pelos blocos catch
+                            throw task.getException();
+                        } catch (FirebaseAuthInvalidCredentialsException e) {
+                            // ESTA EXCEÇÃO AGORA COBRE:
+                            // 1. E-mail não encontrado
+                            // 2. Senha incorreta
+                            // 3. E-mail mal formatado
+                            // Portanto, usamos uma mensagem genérica.
+                            errorMessage = "E-mail ou senha inválidos. Por favor, tente novamente.";
+                        } catch (Exception e) {
+                            // Para qualquer outro erro (problema de rede, etc.)
+                            Log.e("FirebaseAuthDataSource", "Erro não tratado no login: ", e);
+                            errorMessage = "Ocorreu um erro ao fazer login. Tente novamente.";
+                        }
+                        callback.onFailure(errorMessage);
                     }
                 });
     }
@@ -87,8 +136,12 @@ public class FirebaseAuthDataSource implements ICloudAuthDataSource {
                         // Usamos null, pois não há usuário/dados para retornar
                         callback.onSuccess(null, null);
                     } else {
-                        callback.onFailure(task.getException() != null ?
-                                task.getException().getMessage() : "Erro desconhecido ao resetar a senha");
+                        Exception exception = task.getException();
+                        if (exception instanceof FirebaseAuthInvalidCredentialsException){
+                            callback.onFailure("O formato do e-mail é inválido.");
+                        } else {
+                            callback.onSuccess(null, null);
+                        }
                     }
                 });
     }

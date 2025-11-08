@@ -1,5 +1,6 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -12,6 +13,7 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,12 +34,18 @@ import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.adapter.BaralhoAdapter;
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
+import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
+import com.unip.cc7p33.memorizeflashcardapp.model.RankingInfo;
+import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService;
 import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
+import com.unip.cc7p33.memorizeflashcardapp.service.SessaoEstudoService;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -46,8 +54,9 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     private RecyclerView recyclerView;
     private BaralhoAdapter baralhoAdapter;
     private List<Baralho> listaDeBaralhos;
-    private TextView noDecksMessage;
-    private ProgressBar progressBar;
+    private TextView noDecksMessage, tvOfensivaHeader, tvXpProgress;  // Padronizado com maiúsculo    private ProgressBar progressBar;
+    private ImageView ivOfensivaIcon, ivCurrentRankIcon, ivNextRankIcon;
+    private ProgressBar progressBar, progressBarXp;
     private FloatingActionButton fabAddDeck, fabCreateDeck, fabAddCard;
     private TextView createDeckLabel, addCardLabel;
     private boolean isFabMenuOpen = false;
@@ -57,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     private FlashcardService flashcardService;  // Adicionado: para sincronização
 
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,6 +98,12 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         recyclerView = findViewById(R.id.recycler_view_decks);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         noDecksMessage = findViewById(R.id.text_view_no_decks_message);
+        tvOfensivaHeader = findViewById(R.id.tv_ofensiva_header);
+        ivOfensivaIcon = findViewById(R.id.iv_ofensiva_icon);
+        ivCurrentRankIcon = findViewById(R.id.iv_current_rank_icon);
+        ivNextRankIcon = findViewById(R.id.iv_next_rank_icon);
+        progressBarXp = findViewById(R.id.progress_bar_xp);
+        tvXpProgress = findViewById(R.id.tv_xp_progress);
 
         listaDeBaralhos = new ArrayList<>();
         baralhoAdapter = new BaralhoAdapter(listaDeBaralhos, AppDatabase.getInstance(this).baralhoDAO());
@@ -133,6 +149,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     @Override
     protected void onResume() {
         super.onResume();
+        updateOfensivaERanking();
         // Carrega os dados do Firestore sempre que a tela se torna visível/ativa
         carregarBaralhos();
     }
@@ -293,5 +310,77 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         intent.putExtra("DECK_ID", baralho.getBaralhoId());
         intent.putExtra("DECK_NAME", baralho.getNome());
         startActivity(intent);
+    }
+
+    private void updateOfensivaERanking() {
+        FirebaseUser user = authService.getCurrentUser();
+        if (user == null) return;
+
+        Log.d("MainActivity", "updateOfensivaERanking chamado");  // Log para debug
+        // Lógica para atualizar ofensiva e ranking
+        Executors.newSingleThreadExecutor().execute(() -> {
+            UsuarioDAO usuarioDAO = AppDatabase.getInstance(this).usuarioDAO();
+            Usuario usuario = usuarioDAO.getUserByUID(user.getUid());
+
+            if (usuario != null) {
+                // A lógica de verificação agora está centralizada em SessaoEstudoService
+                final boolean estudouHoje = SessaoEstudoService.jaEstudouHoje(usuario.getUltimoEstudo());
+                final Usuario finalUsuario = usuario; // Para usar dentro do runOnUiThread
+                final RankingInfo rankingInfo = SessaoEstudoService.getRankingInfo(usuario.getXp());
+
+                // Atualiza a UI na thread principal
+                runOnUiThread(() -> {
+                    if (tvOfensivaHeader != null && ivOfensivaIcon != null) {
+                        tvOfensivaHeader.setText(String.valueOf(finalUsuario.getOfensiva()));
+                        ivOfensivaIcon.setImageResource(estudouHoje ? R.drawable.ic_fogo_aceso : R.drawable.ic_fogo_apagado);
+                    }
+
+                    // Atualiza o ranking
+
+                    if (ivCurrentRankIcon != null && ivNextRankIcon != null && progressBarXp != null && tvXpProgress != null) {
+                        // 1. Atualiza as imagens dos rankings
+                        ivCurrentRankIcon.setImageResource(getRankDrawableId(rankingInfo.getCurrentRankName()));
+                        ivNextRankIcon.setImageResource(getRankDrawableId(rankingInfo.getNextRankName()));
+
+                        // 2. Atualiza a barra de progresso
+                        progressBarXp.setProgress(rankingInfo.getProgressPercentage());
+
+                        // 3. Atualiza o texto de XP
+                        if (rankingInfo.getNextRankXp() <= rankingInfo.getCurrentRankXp()) {
+                            // Caso de Ranking Máximo
+                            tvXpProgress.setText("Nível Máximo");
+                        } else {
+                            String xpText = (usuario.getXp() - rankingInfo.getCurrentRankXp()) + " / " + (rankingInfo.getNextRankXp() - rankingInfo.getCurrentRankXp()) + " XP";
+                            tvXpProgress.setText(xpText);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Retorna o ID do recurso drawable correspondente ao nome do ranking.
+     * @param rankName O nome do ranking (ex: "Bronze", "Prata").
+     * @return O ID do drawable.
+     */
+    private int getRankDrawableId(String rankName) {
+        switch (rankName.toLowerCase()) {
+            case "prata":
+                return R.drawable.ic_rank_prata;
+            case "ouro":
+                return R.drawable.ic_rank_ouro;
+            case "platina":
+                return R.drawable.ic_rank_platina;
+            case "diamante":
+                return R.drawable.ic_rank_diamante;
+            case "safira":
+                return R.drawable.ic_rank_safira;
+            case "rubi":
+                return R.drawable.ic_rank_rubi;
+            case "bronze":
+            default:
+                return R.drawable.ic_rank_bronze;
+        }
     }
 }

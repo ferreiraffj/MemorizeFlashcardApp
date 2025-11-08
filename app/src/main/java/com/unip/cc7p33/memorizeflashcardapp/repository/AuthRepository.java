@@ -1,6 +1,8 @@
 package com.unip.cc7p33.memorizeflashcardapp.repository;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
@@ -27,7 +29,9 @@ public class AuthRepository implements IAuthRepository {
             try {
                 usuarioDao.insertUser(usuario);
                 Log.d("AuthRepository", "Usuário inserido com sucesso: " + usuario.getEmail());
-                callback.onInsertComplete();
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    callback.onInsertComplete();
+                });
             } catch (Exception e){
                 Log.e("AuthRepository", "Erro ao inserir usuário: " + e.getMessage());
             }
@@ -38,11 +42,13 @@ public class AuthRepository implements IAuthRepository {
     public void getUserByEmail(String email, GetUserCallback callback) {
         executor.execute(() -> {
             Usuario usuario = usuarioDao.getUserByEmail(email);
-            if (usuario != null) {
-                callback.onUserFound(usuario);
-            } else {
-                callback.onUserNotFound();
-            }
+            new Handler(Looper.getMainLooper()).post(()->{
+                if (usuario != null) {
+                    callback.onUserFound(usuario);
+                } else {
+                    callback.onUserNotFound();
+                }
+            });
         });
     }
 

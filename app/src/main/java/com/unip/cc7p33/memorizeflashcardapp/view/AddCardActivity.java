@@ -188,7 +188,12 @@ public class AddCardActivity extends AppCompatActivity {
                     new BaralhoService().incrementarContagem(userId, selectedDeckId)
                             .addOnCompleteListener(task -> {
                                 Toast.makeText(AddCardActivity.this, "Carta salva com sucesso!", Toast.LENGTH_SHORT).show();
-                                finish();
+                                // 1. Limpa os campos de texto para a próxima carta
+                                editTextFront.setText("");
+                                editTextBack.setText("");
+
+                                // 2. Coloca o foco de volta no primeiro campo para facilitar a digitação
+                                editTextFront.requestFocus();
                             });
                 }
                 @Override

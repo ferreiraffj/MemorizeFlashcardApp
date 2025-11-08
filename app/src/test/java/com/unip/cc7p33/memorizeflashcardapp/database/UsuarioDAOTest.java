@@ -26,7 +26,7 @@ public class UsuarioDAOTest {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase.class)
                 .allowMainThreadQueries() // Para testes, permite consultas na thread principal
                 .build();
-        usuarioDao = database.usuarioDao();
+        usuarioDao = database.usuarioDAO();
     }
 
     @After

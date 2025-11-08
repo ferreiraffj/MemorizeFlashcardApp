@@ -2,6 +2,7 @@ package com.unip.cc7p33.memorizeflashcardapp.view;
 
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -15,12 +16,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
 
+import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
+import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
+import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
+import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.SessaoEstudoService;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class SessaoEstudoActivity extends AppCompatActivity {
 
@@ -28,6 +34,8 @@ public class SessaoEstudoActivity extends AppCompatActivity {
     private CardView cardViewFlashcard;
     private LinearLayout layoutAssessment, layoutSessionFinished;
     private SessaoEstudoService service;
+    private AuthService authService;
+
     private long startTime;  // Novo: para medir tempo
 
 
@@ -56,8 +64,11 @@ public class SessaoEstudoActivity extends AppCompatActivity {
             return;
         }
 
+        authService = new AuthService(this);
+
         service = new SessaoEstudoService();
         service.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
+        service.setContext(this);  // Novo: passa contexto
         service.iniciarSessao(receivedList);
 
         Toolbar toolbar = findViewById(R.id.toolbar_sessao_estudo);
@@ -128,7 +139,16 @@ public class SessaoEstudoActivity extends AppCompatActivity {
         layoutAssessment.setVisibility(View.GONE);
         textViewShowAnswer.setVisibility(View.GONE);
         layoutSessionFinished.setVisibility(View.VISIBLE);
-
         textViewScore.setText(service.obterEstatisticas());
+
+        FirebaseUser user = authService.getCurrentUser();
+        if (user == null) return;
+        Log.d("SessaoEstudoActivity", "Chamando marcarEstudo");  // Log
+        service.marcarEstudo(user.getUid(), () -> {
+            // Callback
+            Toast.makeText(this, "Sessão finalizada!", Toast.LENGTH_SHORT).show();
+            finish();
+            Log.d("SessaoEstudoActivity", "marcarEstudo concluído");  // Log
+        });  // Passa UID correto
     }
 }
