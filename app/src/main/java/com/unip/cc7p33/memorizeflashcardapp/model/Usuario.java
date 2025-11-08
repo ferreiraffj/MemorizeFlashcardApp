@@ -17,14 +17,24 @@ public class Usuario {
     private String email;
     private int diasConsecutivos;
     private Date ultimoAcesso;
+    private int xp;
+    private String ranking;
+    private Date ultimoEstudo;  // Último dia em que estudou cartas
+    private int ofensiva;
+
+    // Construtores, getters e setters...
 
     public Usuario() {
         // Construtor padrão necessário para o Firestore
     }
 
-    public Usuario(String nome, String email) {
-        this.nome = nome;
+    public Usuario(String uid, String email, int diasConsecutivos, Date ultimoAcesso) {
+        this.uid = uid;
         this.email = email;
+        this.diasConsecutivos = diasConsecutivos;
+        this.ultimoAcesso = ultimoAcesso;
+        this.ofensiva = 0;  // Inicializa ofensiva
+        this.ultimoEstudo = null;  // Inicializa
     }
 
     public String getUid() {
@@ -54,4 +64,12 @@ public class Usuario {
     public void setDiasConsecutivos(int diasConsecutivos) { this.diasConsecutivos = diasConsecutivos; }
     public Date getUltimoAcesso() { return ultimoAcesso; }
     public void setUltimoAcesso(Date ultimoAcesso) { this.ultimoAcesso = ultimoAcesso; }
+    public int getXp() { return xp; }
+    public void setXp(int xp) { this.xp = xp; }
+    public String getRanking() { return ranking; }
+    public void setRanking(String ranking) { this.ranking = ranking; }
+    public Date getUltimoEstudo() { return ultimoEstudo; }
+    public void setUltimoEstudo(Date ultimoEstudo) { this.ultimoEstudo = ultimoEstudo; }
+    public int getOfensiva() { return ofensiva; }
+    public void setOfensiva(int ofensiva) { this.ofensiva = ofensiva; }
 }

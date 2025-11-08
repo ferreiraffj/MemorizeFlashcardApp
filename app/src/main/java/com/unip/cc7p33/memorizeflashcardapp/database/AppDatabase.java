@@ -21,7 +21,7 @@ public abstract class AppDatabase extends RoomDatabase {
     private static AppDatabase instance;
 
     // Migração destrutiva para recriar tabelas (perde dados, mas funciona para MVP)
-    private static final Migration MIGRATION_5_6 = new Migration(5, 6) {
+    private static final Migration MIGRATION_6_7 = new Migration(6, 7) {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             // Recria tabelas com novos campos (destrutivo)
@@ -35,7 +35,7 @@ public abstract class AppDatabase extends RoomDatabase {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
                             AppDatabase.class, "memorize_flashcard_db")
-                    .addMigrations(MIGRATION_5_6)  // Adiciona a migração
+                    .addMigrations(MIGRATION_6_7)  // Adiciona a migração
                     .build();
         }
         return instance;
