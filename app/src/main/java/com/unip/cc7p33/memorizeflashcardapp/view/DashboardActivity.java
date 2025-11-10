@@ -1,32 +1,32 @@
-package com.unip.cc7p33.memorizeflashcardapp.view;import android.os.Bundle;
+package com.unip.cc7p33.memorizeflashcardapp.view;
+
+import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.github.mikephil.charting.charts.BarChart;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
-import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.unip.cc7p33.memorizeflashcardapp.model.EstudoDiario;
 import com.unip.cc7p33.memorizeflashcardapp.service.DashboardService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 public class DashboardActivity extends AppCompatActivity {
     private TextView tvDashboardOfensiva, tvDashboardCartasMaduras, tvDashboardMelhorBaralho, tvDashboardRetencao;
-    private LineChart lineChart;
+    private BarChart barChart;
     private DashboardService dashboardService;
     private String userId;
 
@@ -35,32 +35,34 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
-        // 3. Inicializa o serviço que contém toda a lógica
+        SystemUIUtils.hideStatusBar(this);
+
         dashboardService = new DashboardService(this);
 
-        // 4. Conecta os TextViews do layout do dashboard
         tvDashboardOfensiva = findViewById(R.id.tv_dashboard_ofensiva);
         tvDashboardCartasMaduras = findViewById(R.id.tv_dashboard_cartas_maduras);
         tvDashboardMelhorBaralho = findViewById(R.id.tv_dashboard_melhor_baralho);
         tvDashboardRetencao = findViewById(R.id.tv_dashboard_retencao);
-        lineChart = findViewById(R.id.line_chart_progresso); // << ADICIONAR
+        barChart = findViewById(R.id.chart_progresso_estudo);
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             userId = user.getUid();
-            loadAllDashboardMetrics();
         } else {
             Toast.makeText(this, "Usuário não encontrado. Faça login novamente.", Toast.LENGTH_LONG).show();
-            finish(); // Fecha a activity se não houver usuário logado
+            finish();
         }
     }
 
-    /**
-     * Orquestra o carregamento de todas as métricas do dashboard,
-     * chamando os métodos correspondentes da DashboardService.
-     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (userId != null && !userId.isEmpty()) {
+            loadAllDashboardMetrics();
+        }
+    }
+
     private void loadAllDashboardMetrics() {
-        // Carrega cada métrica individualmente
         loadOfensiva();
         loadCartasMaduras();
         loadMelhorBaralho();
@@ -72,7 +74,6 @@ public class DashboardActivity extends AppCompatActivity {
         dashboardService.getOfensiva(userId, new DashboardService.DashboardDataCallback<Integer>() {
             @Override
             public void onDataLoaded(Integer data) {
-                // Formata o texto para exibição
                 tvDashboardOfensiva.setText(String.format("%d dias", data));
             }
 
@@ -134,69 +135,85 @@ public class DashboardActivity extends AppCompatActivity {
             @Override
             public void onDataLoaded(List<EstudoDiario> dados) {
                 if (dados == null || dados.isEmpty()) {
-                    lineChart.clear();
-                    lineChart.setNoDataText("Sem dados de estudo nos últimos 7 dias.");
-                    lineChart.invalidate();
+                    barChart.clear();
+                    barChart.setNoDataText("Sem dados de estudo nos últimos 7 dias.");
+                    barChart.invalidate();
                     return;
                 }
-                setupLineChart(dados);
+                setupBarChart(dados);
             }
 
             @Override
             public void onError(Exception e) {
                 Log.e("DashboardActivity", "Erro ao carregar progresso de estudo", e);
-                lineChart.setNoDataText("Erro ao carregar dados do gráfico.");
+                barChart.setNoDataText("Erro ao carregar dados do gráfico.");
             }
         });
     }
 
-    private void setupLineChart(List<EstudoDiario> dados) {
-        ArrayList<Entry> entries = new ArrayList<>();
-        final ArrayList<String> labels = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM", Locale.getDefault());
+    private void setupBarChart(List<EstudoDiario> dados) {
+        ArrayList<BarEntry> entries = new ArrayList<>();
+        final String[] diasDaSemana = new String[]{"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"};
+        int[] contagemPorDia = new int[7];
 
-        long dataReferencia = dados.get(0).diaEstudo.getTime();
+        Calendar cal = Calendar.getInstance();
 
         for (EstudoDiario dia : dados) {
-            long diasDesdeReferencia = TimeUnit.MILLISECONDS.toDays(dia.diaEstudo.getTime() - dataReferencia);
-            entries.add(new Entry(diasDesdeReferencia, dia.contagem));
-            labels.add(sdf.format(dia.diaEstudo));
+            cal.setTime(dia.diaEstudo);
+            int diaIndex = cal.get(Calendar.DAY_OF_WEEK) - 1;
+            if (diaIndex >= 0 && diaIndex < 7) {
+                contagemPorDia[diaIndex] = dia.contagem;
+            }
         }
 
-        LineDataSet dataSet = new LineDataSet(entries, "Cartas Estudadas");
+        for (int i = 0; i < 7; i++) {
+            entries.add(new BarEntry(i, contagemPorDia[i]));
+        }
+
+        BarDataSet dataSet = new BarDataSet(entries, "Cartas Estudadas");
         dataSet.setColor(getResources().getColor(R.color.blueStripe));
         dataSet.setValueTextColor(getResources().getColor(R.color.black));
-        dataSet.setCircleColor(getResources().getColor(R.color.blueStripe));
-        dataSet.setLineWidth(2f);
-        dataSet.setValueTextSize(10f);
+        dataSet.setValueTextSize(12f);
 
-        LineData lineData = new LineData(dataSet);
-        lineChart.setData(lineData);
+        BarData barData = new BarData(dataSet);
+        barData.setBarWidth(0.6f);
+        barChart.setData(barData);
 
-        // Customização do eixo X (datas)
-        XAxis xAxis = lineChart.getXAxis();
+        barChart.getDescription().setEnabled(false);
+        barChart.getAxisRight().setEnabled(false);
+        barChart.getLegend().setEnabled(false);
+        barChart.setFitBars(true);
+        barChart.setDrawGridBackground(false);
+        barChart.setScaleEnabled(false);
+        barChart.setExtraBottomOffset(10f);
+
+        barChart.getAxisLeft().setAxisMinimum(0f);
+        barChart.getAxisLeft().setGranularity(1.0f);
+        barChart.getAxisLeft().setDrawGridLines(false);
+        barChart.getAxisLeft().setTextSize(12f);
+        barChart.getAxisLeft().setAxisLineColor(getResources().getColor(android.R.color.darker_gray));
+        barChart.getAxisLeft().setTextColor(getResources().getColor(android.R.color.darker_gray));
+
+        XAxis xAxis = barChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setDrawGridLines(false);
         xAxis.setGranularity(1f);
+        xAxis.setTextSize(12f);
+        xAxis.setAxisLineColor(getResources().getColor(android.R.color.darker_gray));
+        xAxis.setTextColor(getResources().getColor(android.R.color.darker_gray));
+
         xAxis.setValueFormatter(new ValueFormatter() {
             @Override
             public String getFormattedValue(float value) {
-                int index = (int) value;
-                if (index >= 0 && index < labels.size()) {
-                    // Recalcula o índice para corresponder ao da lista de labels
-                    long diasDesdeReferencia = TimeUnit.MILLISECONDS.toDays(dados.get(index).diaEstudo.getTime() - dataReferencia);
-                    if(diasDesdeReferencia == value){
-                        return labels.get(index);
-                    }
+                if (value >= 0 && value < diasDaSemana.length) {
+                    return diasDaSemana[(int) value];
                 }
                 return "";
             }
         });
 
-        // Customização geral
-        lineChart.getDescription().setEnabled(false);
-        lineChart.getAxisRight().setEnabled(false);
-        lineChart.getAxisLeft().setAxisMinimum(0f);
-        lineChart.animateX(1000);
-        lineChart.invalidate(); // Refresh o gráfico
+        barChart.animateY(1500);
+        barChart.invalidate();
     }
+
 }

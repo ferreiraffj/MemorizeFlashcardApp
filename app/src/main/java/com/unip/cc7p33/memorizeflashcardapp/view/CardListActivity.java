@@ -27,6 +27,7 @@ import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService;
 import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -49,15 +50,7 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_card_list);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars());
-            }
-        } else {
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        }
+        SystemUIUtils.hideStatusBar(this);
 
         deckId = getIntent().getStringExtra("DECK_ID");
         String deckName = getIntent().getStringExtra("DECK_NAME");

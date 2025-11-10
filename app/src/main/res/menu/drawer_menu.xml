@@ -7,6 +7,9 @@
         android:id="@+id/nav_dashboards"
         android:title="Dashboards" />
     <item
+        android:id="@+id/nav_baralhos"
+        android:title="Baralhos" />
+    <item
         android:id="@+id/nav_ajuda"
         android:title="Ajuda" />
 </menu>

@@ -7,6 +7,7 @@ import android.util.Log;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.Query;
 
@@ -162,7 +163,7 @@ public class FlashcardService {
                 });
     }
 
-    // ##### NOVO MÉTODO PARA SINCRONIZAÇÃO INTELIGENTE #####
+    // ##### NOVO METODO PARA SINCRONIZAÇÃO INTELIGENTE #####
     /**
      * Busca os flashcards de um baralho específico no Firestore,
      * salva-os no banco de dados local (Room) e retorna a lista.
@@ -201,6 +202,29 @@ public class FlashcardService {
                     Log.e("FlashcardService", "Erro ao buscar cartas do Firestore", e);
                     mainHandler.post(() -> listener.onFailure(e));
                 });
+    }
+
+    public void deletarTodasAsCartasDoBaralho(String userId, String deckId, Runnable onComplete) {
+        // Deleta do Firestore
+        db.collection("users").document(userId)
+                .collection("baralhos").document(deckId)
+                .collection("flashcards").get().addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            document.getReference().delete();
+                        }
+                    }
+                });
+
+        // Deleta do Room
+        if (flashcardDAO != null) {
+            executorService.execute(() -> {
+                flashcardDAO.deleteByDeckId(deckId);
+                mainHandler.post(onComplete);
+            });
+        } else {
+            mainHandler.post(onComplete);
+        }
     }
 
     public interface OnCompleteListener<T> {

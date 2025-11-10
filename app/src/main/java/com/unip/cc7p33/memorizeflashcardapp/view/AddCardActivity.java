@@ -25,6 +25,7 @@ import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService;
 import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,17 +50,8 @@ public class AddCardActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_card);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Para Android 11+ (API 30+): Usa WindowInsetsController para ocultar a barra de status
-            getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars());
-            }
-        } else {
-            // Para versões anteriores: Usa flags de janela para tela cheia
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        }
+
+        SystemUIUtils.hideStatusBar(this);
 
         flashcardService = new FlashcardService();
         flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());  // Adicionado: configura DAO
