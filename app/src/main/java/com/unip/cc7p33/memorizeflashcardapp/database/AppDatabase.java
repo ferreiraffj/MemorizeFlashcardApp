@@ -14,28 +14,17 @@ import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 
-@Database(entities = {Usuario.class, Flashcard.class, Baralho.class}, version = 6, exportSchema = false)  // Versão incrementada para 4 (adiciona deckId)
+@Database(entities = {Usuario.class, Flashcard.class, Baralho.class}, version = 8, exportSchema = false)
 @TypeConverters({Converters.class})  // Adicionado para converter Date
 public abstract class AppDatabase extends RoomDatabase {
 
     private static AppDatabase instance;
 
-    // Migração destrutiva para recriar tabelas (perde dados, mas funciona para MVP)
-    private static final Migration MIGRATION_6_7 = new Migration(6, 7) {
-        @Override
-        public void migrate(@NonNull SupportSQLiteDatabase database) {
-            // Recria tabelas com novos campos (destrutivo)
-            database.execSQL("DROP TABLE IF EXISTS usuarios");
-            database.execSQL("DROP TABLE IF EXISTS flashcards");
-            database.execSQL("DROP TABLE IF EXISTS baralhos");
-            // Room recriará automaticamente as tabelas com o novo schema
-        }
-    };
     public static synchronized AppDatabase getInstance(Context context) {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
                             AppDatabase.class, "memorize_flashcard_db")
-                    .addMigrations(MIGRATION_6_7)  // Adiciona a migração
+                    .fallbackToDestructiveMigration()
                     .build();
         }
         return instance;

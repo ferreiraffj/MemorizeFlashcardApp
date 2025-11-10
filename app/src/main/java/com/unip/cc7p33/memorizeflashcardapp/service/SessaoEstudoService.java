@@ -26,20 +26,15 @@ public class SessaoEstudoService {
     private List<Flashcard> cardList;
     private int currentCardIndex = 0;
     private int correctAnswersCount = 0;
-    private FlashcardDAO flashcardDAO;  // Novo campo para DAO
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();  // Para operações assíncronas
     private boolean estudouHoje = false;
     private Context context;  // Novo: para acessar AppDatabase
     private ICloudAuthDataSource cloudAuthDataSource;
+    private final FlashcardService flashcardService;
 
-    public void setContext(Context context) {
+    public SessaoEstudoService(Context context, FlashcardService flashcardService) {
         this.context = context;
-        // Instancia o data source da nuvem quando o contexto é definido
+        this.flashcardService = flashcardService;
         this.cloudAuthDataSource = new FirebaseAuthDataSource();
-    }
-
-    public void setFlashcardDAO(FlashcardDAO dao) {
-        this.flashcardDAO = dao;
     }
 
     // Inicia a sessão com a lista de cartas (shuffle incluído)
@@ -69,17 +64,30 @@ public class SessaoEstudoService {
     public void avancarCarta(int quality) {
         Flashcard card = obterCartaAtual();
         if (card != null) {
+            // Atualiza contadores de acertos/erros
             if (quality >= 3) {
                 card.setAcertos(card.getAcertos() + 1);
-                correctAnswersCount++;  // Para estatísticas
+                correctAnswersCount++;
             } else {
                 card.setErros(card.getErros() + 1);
             }
-            SM2Algorithm.applySM2(card, quality);  // Aplica SM2 com quality
+            // Aplica o algoritmo SM2 para calcular o próximo intervalo
+            SM2Algorithm.applySM2(card, quality);
             estudouHoje = true;
-            if (flashcardDAO != null) {
-                executorService.execute(() -> flashcardDAO.update(card));
-            }
+
+            // Delega a atualização para o FlashcardService, que salva no Room E no Firestore
+            flashcardService.updateCarta(card.getUserId(), card.getDeckId(), card, new FlashcardService.OnCompleteListener<Flashcard>() {
+                @Override
+                public void onSuccess(Flashcard result) {
+                    Log.d("SessaoEstudoService", "Carta " + card.getFlashcardId() + " atualizada com sucesso em ambas as fontes.");
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    Log.e("SessaoEstudoService", "Falha ao sincronizar atualização da carta " + card.getFlashcardId(), e);
+                    // Mesmo com falha na nuvem, a atualização no Room (feita pelo updateCarta) deve persistir na sessão atual
+                }
+            });
         }
         currentCardIndex++;
     }
@@ -173,7 +181,7 @@ public class SessaoEstudoService {
         // +10xp por carta estudada
         int xpGanho = getTotalCards() * 10; // Total de cartas da sessão
 
-        executorService.execute(() -> {
+        Executors.newSingleThreadExecutor().execute(() -> {
             UsuarioDAO usuarioDAO = AppDatabase.getInstance(context).usuarioDAO();
             Usuario usuario = usuarioDAO.getUserByUID(userid);
 
@@ -181,25 +189,19 @@ public class SessaoEstudoService {
                 usuario.setXp(usuario.getXp() + xpGanho);
                 usuario.setRanking(SessaoEstudoService.getRankingInfo(usuario.getXp()).getCurrentRankName());
 
-                // 1. Verifica se a ofensiva deve ser incrementada (usando o metodo correto)
                 if (!SessaoEstudoService.jaEstudouHoje(usuario.getUltimoEstudo())) {
                     usuario.setOfensiva(usuario.getOfensiva() + 1);
                 }
 
-                // 2. Prepara a data de hoje para ser salva
                 Calendar hojeInicioDoDia = Calendar.getInstance();
                 hojeInicioDoDia.set(Calendar.HOUR_OF_DAY, 0);
                 hojeInicioDoDia.set(Calendar.MINUTE, 0);
                 hojeInicioDoDia.set(Calendar.SECOND, 0);
                 hojeInicioDoDia.set(Calendar.MILLISECOND, 0);
-
-                // 3. Atualiza a data do último estudo para HOJE (uma única vez)
                 usuario.setUltimoEstudo(hojeInicioDoDia.getTime());
 
-                // 4. Atualiza o banco de dados local
                 usuarioDAO.update(usuario);
 
-                // 5. Salva na nuvem
                 if (cloudAuthDataSource != null) {
                     cloudAuthDataSource.updateUser(usuario, new ICloudAuthDataSource.AuthResultCallback(){
                         @Override
@@ -210,11 +212,9 @@ public class SessaoEstudoService {
                     Log.d("SessaoEstudoService", "Usuário atualizado no Firestore com sucesso: " + usuario.getUid());
                 }
             }
-            estudouHoje = false; // Reseta para a próxima sessão
+            estudouHoje = false;
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                if (onComplete != null) {
-                    onComplete.run();
-                }
+                if (onComplete != null) onComplete.run();
             });
         });
     }

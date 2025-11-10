@@ -1,5 +1,6 @@
 package com.unip.cc7p33.memorizeflashcardapp.model;
 
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
@@ -10,9 +11,10 @@ import java.util.Date;
 @Entity(tableName = "flashcard")
 public class Flashcard implements Serializable {
 
-    @PrimaryKey(autoGenerate = true)
-    private int flashcardId;
-
+    @PrimaryKey
+    @NonNull
+    private String flashcardId = "";
+    private String userId;
     private String frente;
     private String verso;
     private String deckId;  // Novo: associa carta ao deck
@@ -42,16 +44,20 @@ public class Flashcard implements Serializable {
     public Flashcard() {}
 
     @Ignore  // Adicionado para evitar aviso de múltiplos construtores
-    public Flashcard(String frente, String verso, String deckId) {
+    public Flashcard(String frente, String verso, String deckId, String userId) {
         this.frente = frente;
         this.verso = verso;
         this.deckId = deckId;
+        this.userId = userId;
         this.proximaRevisao = new Date();
     }
 
     // Getters e Setters (garanta que todos estejam presentes e corretos)
-    public int getFlashcardId() { return flashcardId; }
-    public void setFlashcardId(int flashcardId) { this.flashcardId = flashcardId; }
+    public String getFlashcardId() { return flashcardId; }
+    public void setFlashcardId(@NonNull String flashcardId) { this.flashcardId = flashcardId; }
+
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 
     public String getFrente() { return frente; }
     public void setFrente(String frente) { this.frente = frente; }

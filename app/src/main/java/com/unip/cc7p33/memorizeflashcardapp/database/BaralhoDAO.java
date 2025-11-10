@@ -16,6 +16,12 @@ public interface BaralhoDAO {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(Baralho baralho);
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertAll(List<Baralho> baralhos);
+
+    @Query("DELETE FROM baralhos")
+    void deleteAll();
+
     @Update
     void update(Baralho baralho);
 
@@ -39,4 +45,9 @@ public interface BaralhoDAO {
 
     @Query("SELECT COUNT(*) FROM flashcard WHERE deckId = :deckId AND repeticoes = 0")
     int getNovasCount(String deckId);  // Apenas novas (nunca revisadas)
+
+    // Adicione este método para buscar todos os baralhos de forma síncrona (para uso em threads de background)
+    @Query("SELECT * FROM baralhos WHERE usuario_id = :userId")
+    List<Baralho> getAllDecksSync(String userId);
+
 }

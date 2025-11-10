@@ -3,17 +3,24 @@ package com.unip.cc7p33.memorizeflashcardapp.service;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.util.Log;
 
 import com.google.firebase.auth.FirebaseUser;
+import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
+import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.repository.IAuthRepository;
 import com.unip.cc7p33.memorizeflashcardapp.repository.ICloudAuthDataSource;
+
+import java.util.List;
 
 public class AuthService {
 
     private final ICloudAuthDataSource cloudAuthDataSource;
     private final IAuthRepository authRepository;
     private final ConnectivityManager connectivityManager;
+    private final FlashcardService flashcardService;
+    private final BaralhoService baralhoService;
 
     public interface AuthCallback {
         void onSuccess(Usuario usuario);
@@ -22,10 +29,12 @@ public class AuthService {
 
     // NOVO CONSTRUTOR: Recebe todas as dependências como interfaces
     // O Context é mantido APENAS para o serviço do ConnectivityManager
-    public AuthService(ICloudAuthDataSource cloudAuthDataSource, IAuthRepository authRepository, ConnectivityManager connectivityManager) {
+    public AuthService(ICloudAuthDataSource cloudAuthDataSource, IAuthRepository authRepository, ConnectivityManager connectivityManager, FlashcardService flashcardService, BaralhoService baralhoService) {
         this.cloudAuthDataSource = cloudAuthDataSource;
         this.authRepository = authRepository;
         this.connectivityManager = connectivityManager;
+        this.flashcardService = flashcardService;
+        this.baralhoService = baralhoService;
     }
 
     // Construtor auxiliar da Activity (para manter a compatibilidade no código de produção)
@@ -33,6 +42,10 @@ public class AuthService {
         this.cloudAuthDataSource = new com.unip.cc7p33.memorizeflashcardapp.repository.FirebaseAuthDataSource();
         this.authRepository = new com.unip.cc7p33.memorizeflashcardapp.repository.AuthRepository(context);
         this.connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        this.flashcardService = new FlashcardService();
+        this.flashcardService.setFlashcardDAO(AppDatabase.getInstance(context).flashcardDAO());
+        this.baralhoService = new BaralhoService();
+        this.baralhoService.setBaralhoDAO(AppDatabase.getInstance(context).baralhoDAO());
     }
 
     public void registerUser(String email, String password, String nome, AuthCallback callback) {
@@ -55,13 +68,33 @@ public class AuthService {
 
     public void loginUser(String email, String password, AuthCallback callback) {
         if (isConnectedToInternet()) {
-            // Chama o data source Cloud
             cloudAuthDataSource.loginUser(email, password, new ICloudAuthDataSource.AuthResultCallback() {
                 @Override
                 public void onSuccess(FirebaseUser user, Usuario usuario) {
-                    // Se o Cloud teve sucesso, salva localmente
                     authRepository.insertUser(usuario, () -> {
-                        callback.onSuccess(usuario);
+                        // ##### 3. LÓGICA DE SINCRONIZAÇÃO CORRIGIDA #####
+                        Log.d("AuthService", "Iniciando sincronização de BARALHOS após login...");
+                        baralhoService.baixarBaralhosDaNuvem(user.getUid(), new BaralhoService.OnCompleteListener<List<Baralho>>() {
+                            @Override
+                            public void onSuccess(List<Baralho> result) {
+                                Log.d("AuthService", "Sincronização de BARALHOS concluída. Iniciando de FLASHCARDS...");
+                                flashcardService.syncExistingDataToRoom(user.getUid(), () -> {
+                                    Log.d("AuthService", "Sincronização de FLASHCARDS concluída.");
+                                    // Notifica a UI que TUDO terminou
+                                    callback.onSuccess(usuario);
+                                });
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                Log.e("AuthService", "Falha na sincronização de baralhos. A sincronização de flashcards ainda será tentada.", e);
+                                // Mesmo com falha, tentamos sincronizar o resto e notificamos o usuário.
+                                flashcardService.syncExistingDataToRoom(user.getUid(), () -> {
+                                    callback.onSuccess(usuario);
+                                });
+                            }
+                        });
+                        // ##### FIM DA LÓGICA DE SINCRONIZAÇÃO CORRIGIDA #####
                     });
                 }
 
@@ -70,7 +103,6 @@ public class AuthService {
                     callback.onFailure(errorMessage);
                 }
             });
-
         } else {
             // Lógica offline, utilizando a nova interface (IAuthRepository)
             authRepository.getUserByEmail(email, new IAuthRepository.GetUserCallback() {

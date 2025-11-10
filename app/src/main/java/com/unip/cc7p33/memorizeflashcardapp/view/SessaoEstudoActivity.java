@@ -23,6 +23,7 @@ import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
+import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 import com.unip.cc7p33.memorizeflashcardapp.service.SessaoEstudoService;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class SessaoEstudoActivity extends AppCompatActivity {
     private CardView cardViewFlashcard;
     private LinearLayout layoutAssessment, layoutSessionFinished;
     private SessaoEstudoService service;
+    private FlashcardService flashcardService;
     private AuthService authService;
 
     private long startTime;  // Novo: para medir tempo
@@ -65,10 +67,10 @@ public class SessaoEstudoActivity extends AppCompatActivity {
         }
 
         authService = new AuthService(this);
+        flashcardService = new FlashcardService();
+        flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
 
-        service = new SessaoEstudoService();
-        service.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
-        service.setContext(this);  // Novo: passa contexto
+        service = new SessaoEstudoService(this, flashcardService);
         service.iniciarSessao(receivedList);
 
         Toolbar toolbar = findViewById(R.id.toolbar_sessao_estudo);

@@ -130,31 +130,27 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
     private void syncCardsFromFirestore(String deckId) {
         FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) return;
-        flashcardService.getCartasDoBaralho(currentUser.getUid(), deckId)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        List<Flashcard> syncedCards = task.getResult().toObjects(Flashcard.class);
-                        cardList.clear();
-                        cardList.addAll(syncedCards);
-                        adapter.notifyDataSetChanged();
-                        Executors.newSingleThreadExecutor().execute(() -> {
-                            for (Flashcard card : syncedCards) {
-                                card.setDeckId(deckId);  // Adicione deckId
-                                List<Flashcard> existing = flashcardDAO.getByDeckId(deckId);
-                                boolean isDuplicate = existing.stream().anyMatch(c -> c.getFrente().equals(card.getFrente()) && c.getVerso().equals(card.getVerso()));
-                                if (!isDuplicate) {
-                                    flashcardDAO.insert(card);
-                                }
-                            }
-                        });
-                        if (syncedCards.isEmpty()) {
-                            Toast.makeText(this, "Nenhuma carta neste baralho ainda.", Toast.LENGTH_SHORT).show();
-                        }
-                    } else {
-                        Log.e("CardListActivity", "Erro ao buscar cartas.", task.getException());
-                        Toast.makeText(this, "Erro ao buscar cartas.", Toast.LENGTH_SHORT).show();
-                    }
-                });
+
+        // Usa o novo método do serviço que já cuida de tudo
+        flashcardService.fetchAndSaveCardsFromDeck(currentUser.getUid(), deckId, new FlashcardService.OnCompleteListener<List<Flashcard>>() {
+            @Override
+            public void onSuccess(List<Flashcard> syncedCards) {
+                // Atualiza a UI com as cartas recém-sincronizadas
+                cardList.clear();
+                cardList.addAll(syncedCards);
+                adapter.notifyDataSetChanged();
+
+                if (syncedCards.isEmpty()) {
+                    Toast.makeText(CardListActivity.this, "Nenhuma carta neste baralho ainda.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                Log.e("CardListActivity", "Erro ao sincronizar cartas.", e);
+                Toast.makeText(CardListActivity.this, "Erro ao buscar cartas.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
 

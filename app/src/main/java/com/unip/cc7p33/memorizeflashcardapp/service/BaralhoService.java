@@ -2,11 +2,15 @@ package com.unip.cc7p33.memorizeflashcardapp.service;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import java.util.ArrayList;
 import com.unip.cc7p33.memorizeflashcardapp.database.BaralhoDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
 
@@ -90,7 +94,7 @@ public class BaralhoService {
         // Padronize para users/{userId}/decks
         db.collection("users")
                 .document(baralho.getUsuarioId())
-                .collection("decks")
+                .collection("baralhos") // <-- CORRIGIDO
                 .document(baralho.getBaralhoId())
                 .set(baralho)
                 .addOnSuccessListener(aVoid -> {
@@ -101,32 +105,43 @@ public class BaralhoService {
                 });
     }
 
-    private void baixarBaralhosDaNuvem(String userId, OnCompleteListener<List<Baralho>> listener) {
-        // Padronize para users/{userId}/decks e corrija campo para "usuarioId"
+    public void baixarBaralhosDaNuvem(String userId, OnCompleteListener<List<Baralho>> listener) {
+        Log.d("BaralhoService", "Iniciando download e sincronização de baralhos do Firestore.");
         db.collection("users")
                 .document(userId)
-                .collection("decks")
-                .whereEqualTo("usuarioId", userId)  // Corrigido: campo correto
+                .collection("baralhos") // Caminho corrigido
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<Baralho> remotos = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         Baralho baralho = doc.toObject(Baralho.class);
                         remotos.add(baralho);
-                        // Salve no Room para merge
-                        if (baralhoDAO != null) {
-                            executorService.execute(() -> baralhoDAO.insert(baralho));
-                        }
                     }
-                    mainHandler.post(() -> listener.onSuccess(remotos));
+
+                    // Se encontrou baralhos na nuvem, salva TODOS no Room
+                    if (baralhoDAO != null && !remotos.isEmpty()) {
+                        executorService.execute(() -> {
+                            // Este método deve ter @Insert(onConflict = OnConflictStrategy.REPLACE)
+                            baralhoDAO.insertAll(remotos);
+                            Log.d("BaralhoService", remotos.size() + " baralhos sincronizados com o Room.");
+                            // Retorna a lista para a UI thread
+                            mainHandler.post(() -> listener.onSuccess(remotos));
+                        });
+                    } else {
+                        // Se não encontrou nada na nuvem, retorna a lista vazia
+                        mainHandler.post(() -> listener.onSuccess(remotos));
+                    }
                 })
-                .addOnFailureListener(e -> mainHandler.post(() -> listener.onFailure(e)));
+                .addOnFailureListener(e -> {
+                    Log.e("BaralhoService", "Falha ao baixar baralhos da nuvem.", e);
+                    mainHandler.post(() -> listener.onFailure(e));
+                });
     }
 
     public Task<Void> incrementarContagem(String userId, String deckId) {
     return db.collection("users")
             .document(userId)
-            .collection("decks")
+            .collection("baralhos")
             .document(deckId)
             .update("quantidadeCartas", FieldValue.increment(1));
 }
@@ -138,7 +153,7 @@ public class BaralhoService {
     public Task<Void> decrementarContagem(String userId, String deckId) {
         final DocumentReference deckRef = db.collection("users")
                 .document(userId)
-                .collection("decks")
+                .collection("baralhos")
                 .document(deckId);
 
         // Roda a operação como uma transação segura

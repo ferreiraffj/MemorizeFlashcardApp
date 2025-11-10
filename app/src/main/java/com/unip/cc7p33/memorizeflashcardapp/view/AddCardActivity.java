@@ -156,9 +156,9 @@ public class AddCardActivity extends AppCompatActivity {
 
         if (isEditMode) {
             // Lógica de ATUALIZAÇÃO
-            card = new Flashcard(frontText, backText, currentDeckId);  // Instancia com dados atuais
-            card.setFlashcardId(Integer.parseInt(editingCardId));
-            card.setDeckId(currentDeckId);  // Adicione deckId para edição
+            card = new Flashcard(frontText, backText, currentDeckId, userId);  // Instancia com dados atuais
+            card.setFlashcardId(editingCardId);
+            card.setDeckId(currentDeckId);
             flashcardService.updateCarta(userId, currentDeckId, card, new FlashcardService.OnCompleteListener<Flashcard>() {
                 @Override
                 public void onSuccess(Flashcard result) {
@@ -180,7 +180,7 @@ public class AddCardActivity extends AppCompatActivity {
             int selectedDeckPosition = spinnerDecks.getSelectedItemPosition();
             String selectedDeckId = deckIds.get(selectedDeckPosition);
 
-            card = new Flashcard(frontText, backText, selectedDeckId);  // Instancia com selectedDeckId
+            card = new Flashcard(frontText, backText, selectedDeckId, userId);  // Instancia com selectedDeckId
 
             flashcardService.adicionarCarta(userId, selectedDeckId, card, new FlashcardService.OnCompleteListener<Flashcard>() {
                 @Override
