@@ -4,9 +4,11 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 import androidx.room.Update;
 
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
+import com.unip.cc7p33.memorizeflashcardapp.model.BaralhoComCartas;
 
 import java.util.List;
 
@@ -50,4 +52,7 @@ public interface BaralhoDAO {
     @Query("SELECT * FROM baralhos WHERE usuario_id = :userId")
     List<Baralho> getAllDecksSync(String userId);
 
+    @Transaction // Garante que a operação é atômica
+    @Query("SELECT * FROM baralhos WHERE usuario_id = :userId")
+    List<BaralhoComCartas> getBaralhosComCartas(String userId);
 }

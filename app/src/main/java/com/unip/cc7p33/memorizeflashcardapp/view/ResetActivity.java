@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 public class ResetActivity extends AppCompatActivity {
 
@@ -28,6 +29,8 @@ public class ResetActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reset);
+
+        SystemUIUtils.hideStatusBar(this);
 
         editTextEmail = findViewById(R.id.edit_text_email_reset);
         btnResetSenha = findViewById(R.id.btn_reset_senha);

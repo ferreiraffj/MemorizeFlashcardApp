@@ -1,12 +1,8 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -19,15 +15,13 @@ import androidx.cardview.widget.CardView;
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
-import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
-import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 import com.unip.cc7p33.memorizeflashcardapp.service.SessaoEstudoService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 import java.util.List;
-import java.util.concurrent.Executors;
 
 public class SessaoEstudoActivity extends AppCompatActivity {
 
@@ -35,7 +29,6 @@ public class SessaoEstudoActivity extends AppCompatActivity {
     private CardView cardViewFlashcard;
     private LinearLayout layoutAssessment, layoutSessionFinished;
     private SessaoEstudoService service;
-    private FlashcardService flashcardService;
     private AuthService authService;
 
     private long startTime;  // Novo: para medir tempo
@@ -46,15 +39,7 @@ public class SessaoEstudoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sessao_estudo);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars());
-            }
-        } else {
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        }
+        SystemUIUtils.hideStatusBar(this);
 
         @SuppressWarnings("unchecked")
         List<Flashcard> receivedList = (List<Flashcard>) getIntent().getSerializableExtra("CARD_LIST");
@@ -67,7 +52,7 @@ public class SessaoEstudoActivity extends AppCompatActivity {
         }
 
         authService = new AuthService(this);
-        flashcardService = new FlashcardService();
+        FlashcardService flashcardService = new FlashcardService();
         flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
 
         service = new SessaoEstudoService(this, flashcardService);

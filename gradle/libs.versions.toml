@@ -18,6 +18,7 @@ lifecycleViewmodelKtx = "2.6.1"
 firebaseStorage = "21.0.2"
 firebaseFirestore = "25.1.4"
 core = "1.7.0"
+identityJvm = "202411.1"
 
 [libraries]
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
@@ -39,6 +40,7 @@ lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-view
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage", version.ref = "firebaseStorage" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
 core = { group = "androidx.test", name = "core", version.ref = "core" }
+identity-jvm = { group = "com.android.identity", name = "identity-jvm", version.ref = "identityJvm" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

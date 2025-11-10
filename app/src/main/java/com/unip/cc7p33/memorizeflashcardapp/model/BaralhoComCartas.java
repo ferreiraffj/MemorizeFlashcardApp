@@ -17,4 +17,3 @@ public class BaralhoComCartas {
     )
     public List<Flashcard> flashcards;
 }
-    

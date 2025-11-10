@@ -131,28 +131,35 @@
             </FrameLayout>
         </com.google.android.material.appbar.AppBarLayout>
 
-        <FrameLayout
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipe_refresh_layout"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_view_decks"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:padding="16dp"
-                tools:listitem="@layout/item_baralho" />
+                android:layout_height="match_parent">
 
-            <TextView
-                android:id="@+id/text_view_no_decks_message"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="Adicione baralhos para que apareçam aqui!"
-                android:textColor="@color/grayTxtAuth"
-                android:textSize="18sp"
-                android:visibility="gone" />
-        </FrameLayout>
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recycler_view_decks"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="16dp"
+                    tools:listitem="@layout/item_baralho" />
+
+                <TextView
+                    android:id="@+id/text_view_no_decks_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Adicione baralhos para que apareçam aqui!"
+                    android:textColor="@color/grayTxtAuth"
+                    android:textSize="18sp"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"

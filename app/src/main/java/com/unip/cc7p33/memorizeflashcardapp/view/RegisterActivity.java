@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -29,6 +30,8 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
+
+        SystemUIUtils.hideStatusBar(this);
 
         editTextNome = findViewById(R.id.edit_text_nome_registro);
         editTextEmail = findViewById(R.id.edit_text_email_registro);

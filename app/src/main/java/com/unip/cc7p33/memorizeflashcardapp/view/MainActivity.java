@@ -2,16 +2,12 @@ package com.unip.cc7p33.memorizeflashcardapp.view;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
-import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -27,6 +23,7 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
@@ -42,10 +39,9 @@ import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
 import com.unip.cc7p33.memorizeflashcardapp.service.BaralhoService;
 import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 import com.unip.cc7p33.memorizeflashcardapp.service.SessaoEstudoService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -54,17 +50,17 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     private RecyclerView recyclerView;
     private BaralhoAdapter baralhoAdapter;
     private List<Baralho> listaDeBaralhos;
-    private TextView noDecksMessage, tvOfensivaHeader, tvXpProgress;  // Padronizado com maiúsculo    private ProgressBar progressBar;
+    private TextView noDecksMessage, tvOfensivaHeader, tvXpProgress;
     private ImageView ivOfensivaIcon, ivCurrentRankIcon, ivNextRankIcon;
-    private ProgressBar progressBar, progressBarXp;
+    private ProgressBar progressBarXp;
     private FloatingActionButton fabAddDeck, fabCreateDeck, fabAddCard;
     private TextView createDeckLabel, addCardLabel;
     private boolean isFabMenuOpen = false;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     private AuthService authService;
     private BaralhoService baralhoService;
-    private FlashcardService flashcardService;  // Adicionado: para sincronização
-
+    private FlashcardService flashcardService;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -72,16 +68,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Para Android 11+ (API 30+): Usa WindowInsetsController para ocultar a barra de status
-            getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars());
-            }
-        } else {
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        }
+        SystemUIUtils.hideStatusBar(this);
 
         authService = new AuthService(this);
         baralhoService = new BaralhoService();
@@ -95,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
+        swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         recyclerView = findViewById(R.id.recycler_view_decks);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         noDecksMessage = findViewById(R.id.text_view_no_decks_message);
@@ -111,50 +99,86 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         recyclerView.setAdapter(baralhoAdapter);
 
         DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
-        NavigationView navigationView = findViewById(R.id.nav_view);
-
-        // Configura o toggle para o botão esquerdo abrir/fechar o Drawer
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawerLayout, toolbar,
-                R.string.navigation_drawer_open,  // Strings de acessibilidade (adicione no strings.xml)
-                R.string.navigation_drawer_close
-        );
-        drawerLayout.addDrawerListener(toggle);
-        toggle.syncState();
-
-        // Trata cliques no menu lateral
-        navigationView.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.nav_perfil) {
-                Intent intent = new Intent(MainActivity.this, ProfileActivity.class);
-                startActivity(intent);
-            } else if (id == R.id.nav_dashboards) {
-                // Abrir Dashboards
-                Intent intent = new Intent(this, DashboardActivity.class);
-                startActivity(intent);
-            } else if (id == R.id.nav_ajuda) {
-                // Abrir Ajuda (futura)
-                Toast.makeText(this, "Ajuda - Em breve!", Toast.LENGTH_SHORT).show();
-            }
-            drawerLayout.closeDrawer(GravityCompat.START);  // Fecha o Drawer após clique
-            return true;
-        });
+        setupNavigationDrawer(toolbar, drawerLayout);
         setupFabs();
+        setupSwipeToRefresh();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         updateOfensivaERanking();
-        // Carrega os dados do Firestore sempre que a tela se torna visível/ativa
         carregarBaralhos();
+    }
+
+    private void setupNavigationDrawer(Toolbar toolbar, DrawerLayout drawerLayout) {
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawerLayout, toolbar,
+                R.string.navigation_drawer_open, R.string.navigation_drawer_close
+        );
+        drawerLayout.addDrawerListener(toggle);
+        toggle.syncState();
+
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_perfil) {
+                startActivity(new Intent(MainActivity.this, ProfileActivity.class));
+            } else if (id == R.id.nav_dashboards) {
+                startActivity(new Intent(this, DashboardActivity.class));
+            } else if (id == R.id.nav_ajuda) {
+                Toast.makeText(this, "Ajuda - Em breve!", Toast.LENGTH_SHORT).show();
+            } else if (id == R.id.nav_baralhos){
+                startActivity(new Intent(MainActivity.this, DeckManagementActivity.class));
+            }
+            drawerLayout.closeDrawer(GravityCompat.START);
+            return true;
+        });
+    }
+
+    private void setupSwipeToRefresh() {
+        swipeRefreshLayout.setColorSchemeResources(R.color.blueStripe, R.color.colorFab);
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            Log.d("MainActivity", "Refresh acionado. Sincronizando dados da nuvem.");
+            forceSyncFromServer();
+        });
+    }
+
+    private void forceSyncFromServer() {
+        FirebaseUser currentUser = authService.getCurrentUser();
+        if (currentUser == null) {
+            swipeRefreshLayout.setRefreshing(false);
+            return;
+        }
+
+        swipeRefreshLayout.setRefreshing(true);
+
+        baralhoService.baixarBaralhosDaNuvem(currentUser.getUid(), new BaralhoService.OnCompleteListener<List<Baralho>>() {
+            @Override
+            public void onSuccess(List<Baralho> baralhos) {
+                flashcardService.syncExistingDataToRoom(currentUser.getUid(), () -> {
+                    Log.d("MainActivity", "Sincronização de cartões finalizada. Recarregando da base local.");
+                    runOnUiThread(() -> {
+                        carregarBaralhos();
+                        swipeRefreshLayout.setRefreshing(false);
+                        Toast.makeText(MainActivity.this, "Dados sincronizados!", Toast.LENGTH_SHORT).show();
+                    });
+                });
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                Log.e("MainActivity", "Erro ao forçar a sincronização.", e);
+                swipeRefreshLayout.setRefreshing(false);
+                Toast.makeText(MainActivity.this, "Erro ao sincronizar dados.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void carregarBaralhos() {
         FirebaseUser currentUser = authService.getCurrentUser();
-        if (currentUser == null) {
-            return;
-        }
+        if (currentUser == null) return;
+
         noDecksMessage.setVisibility(View.GONE);
         recyclerView.setVisibility(View.GONE);
 
@@ -186,12 +210,11 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
                 FirebaseUser currentUser = authService.getCurrentUser();
                 if (!deckName.isEmpty() && currentUser != null) {
                     Baralho novoBaralho = new Baralho(deckName, 0, currentUser.getUid());
-                    // Use o listener da BaralhoService
                     baralhoService.criarBaralho(novoBaralho, currentUser.getUid(), new BaralhoService.OnCompleteListener<Baralho>() {
                         @Override
                         public void onSuccess(Baralho baralho) {
                             Toast.makeText(MainActivity.this, "Baralho '" + deckName + "' criado!", Toast.LENGTH_SHORT).show();
-                            carregarBaralhos();  // Recarrega após sucesso
+                            carregarBaralhos();
                         }
                         @Override
                         public void onFailure(Exception e) {
@@ -284,7 +307,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     private void updateNoDecksMessageVisibility() {
         if (listaDeBaralhos.isEmpty()) {
             noDecksMessage.setVisibility(View.VISIBLE);
-            recyclerView.setVisibility(View.VISIBLE); // Corrigido para VISIBLE para evitar sobreposição
+            recyclerView.setVisibility(View.GONE);
         } else {
             noDecksMessage.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
@@ -293,7 +316,6 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
 
     @Override
     public void onItemClick(Baralho baralho) {
-        // Incrementa visitas
         baralho.setVisitas(baralho.getVisitas() + 1);
         Executors.newSingleThreadExecutor().execute(() ->
                 AppDatabase.getInstance(this).baralhoDAO().update(baralho)
@@ -309,54 +331,34 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         FirebaseUser user = authService.getCurrentUser();
         if (user == null) return;
 
-        Log.d("MainActivity", "updateOfensivaERanking chamado");  // Log para debug
-        // Lógica para atualizar ofensiva e ranking
         Executors.newSingleThreadExecutor().execute(() -> {
             UsuarioDAO usuarioDAO = AppDatabase.getInstance(this).usuarioDAO();
             Usuario usuario = usuarioDAO.getUserByUID(user.getUid());
 
             if (usuario != null) {
-                // A lógica de verificação agora está centralizada em SessaoEstudoService
                 final boolean estudouHoje = SessaoEstudoService.jaEstudouHoje(usuario.getUltimoEstudo());
-                final Usuario finalUsuario = usuario; // Para usar dentro do runOnUiThread
                 final RankingInfo rankingInfo = SessaoEstudoService.getRankingInfo(usuario.getXp());
 
-                // Atualiza a UI na thread principal
                 runOnUiThread(() -> {
-                    if (tvOfensivaHeader != null && ivOfensivaIcon != null) {
-                        tvOfensivaHeader.setText(String.valueOf(finalUsuario.getOfensiva()));
-                        ivOfensivaIcon.setImageResource(estudouHoje ? R.drawable.ic_fogo_aceso : R.drawable.ic_fogo_apagado);
-                    }
+                    tvOfensivaHeader.setText(String.valueOf(usuario.getOfensiva()));
+                    ivOfensivaIcon.setImageResource(estudouHoje ? R.drawable.ic_fogo_aceso : R.drawable.ic_fogo_apagado);
 
-                    // Atualiza o ranking
+                    ivCurrentRankIcon.setImageResource(getRankDrawableId(rankingInfo.getCurrentRankName()));
+                    ivNextRankIcon.setImageResource(getRankDrawableId(rankingInfo.getNextRankName()));
 
-                    if (ivCurrentRankIcon != null && ivNextRankIcon != null && progressBarXp != null && tvXpProgress != null) {
-                        // 1. Atualiza as imagens dos rankings
-                        ivCurrentRankIcon.setImageResource(getRankDrawableId(rankingInfo.getCurrentRankName()));
-                        ivNextRankIcon.setImageResource(getRankDrawableId(rankingInfo.getNextRankName()));
+                    progressBarXp.setProgress(rankingInfo.getProgressPercentage());
 
-                        // 2. Atualiza a barra de progresso
-                        progressBarXp.setProgress(rankingInfo.getProgressPercentage());
-
-                        // 3. Atualiza o texto de XP
-                        if (rankingInfo.getNextRankXp() <= rankingInfo.getCurrentRankXp()) {
-                            // Caso de Ranking Máximo
-                            tvXpProgress.setText("Nível Máximo");
-                        } else {
-                            String xpText = (usuario.getXp() - rankingInfo.getCurrentRankXp()) + " / " + (rankingInfo.getNextRankXp() - rankingInfo.getCurrentRankXp()) + " XP";
-                            tvXpProgress.setText(xpText);
-                        }
+                    if (rankingInfo.getNextRankXp() <= rankingInfo.getCurrentRankXp()) {
+                        tvXpProgress.setText("Nível Máximo");
+                    } else {
+                        String xpText = (usuario.getXp() - rankingInfo.getCurrentRankXp()) + " / " + (rankingInfo.getNextRankXp() - rankingInfo.getCurrentRankXp()) + " XP";
+                        tvXpProgress.setText(xpText);
                     }
                 });
             }
         });
     }
 
-    /**
-     * Retorna o ID do recurso drawable correspondente ao nome do ranking.
-     * @param rankName O nome do ranking (ex: "Bronze", "Prata").
-     * @return O ID do drawable.
-     */
     private int getRankDrawableId(String rankName) {
         switch (rankName.toLowerCase()) {
             case "prata":

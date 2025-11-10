@@ -18,6 +18,7 @@ import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.unip.cc7p33.memorizeflashcardapp.model.EstudoDiario;
 import com.unip.cc7p33.memorizeflashcardapp.service.DashboardService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -34,10 +35,10 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
-        // 3. Inicializa o serviço que contém toda a lógica
+        SystemUIUtils.hideStatusBar(this);
+
         dashboardService = new DashboardService(this);
 
-        // 4. Conecta os TextViews do layout do dashboard
         tvDashboardOfensiva = findViewById(R.id.tv_dashboard_ofensiva);
         tvDashboardCartasMaduras = findViewById(R.id.tv_dashboard_cartas_maduras);
         tvDashboardMelhorBaralho = findViewById(R.id.tv_dashboard_melhor_baralho);
@@ -47,19 +48,21 @@ public class DashboardActivity extends AppCompatActivity {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             userId = user.getUid();
-            loadAllDashboardMetrics();
         } else {
             Toast.makeText(this, "Usuário não encontrado. Faça login novamente.", Toast.LENGTH_LONG).show();
-            finish(); // Fecha a activity se não houver usuário logado
+            finish();
         }
     }
 
-    /**
-     * Orquestra o carregamento de todas as métricas do dashboard,
-     * chamando os métodos correspondentes da DashboardService.
-     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (userId != null && !userId.isEmpty()) {
+            loadAllDashboardMetrics();
+        }
+    }
+
     private void loadAllDashboardMetrics() {
-        // Carrega cada métrica individualmente
         loadOfensiva();
         loadCartasMaduras();
         loadMelhorBaralho();
@@ -71,7 +74,6 @@ public class DashboardActivity extends AppCompatActivity {
         dashboardService.getOfensiva(userId, new DashboardService.DashboardDataCallback<Integer>() {
             @Override
             public void onDataLoaded(Integer data) {
-                // Formata o texto para exibição
                 tvDashboardOfensiva.setText(String.format("%d dias", data));
             }
 
@@ -150,57 +152,48 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void setupBarChart(List<EstudoDiario> dados) {
-        // 1. Preparar os dados para o gráfico
         ArrayList<BarEntry> entries = new ArrayList<>();
         final String[] diasDaSemana = new String[]{"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"};
-        int[] contagemPorDia = new int[7]; // Array para guardar a contagem de cada dia da semana
+        int[] contagemPorDia = new int[7];
 
         Calendar cal = Calendar.getInstance();
 
-        // Preenche o array de contagem com os dados do banco
         for (EstudoDiario dia : dados) {
             cal.setTime(dia.diaEstudo);
-            // Calendar.DAY_OF_WEEK é 1-indexado (Dom=1, Seg=2, ...), então subtraímos 1
             int diaIndex = cal.get(Calendar.DAY_OF_WEEK) - 1;
             if (diaIndex >= 0 && diaIndex < 7) {
                 contagemPorDia[diaIndex] = dia.contagem;
             }
         }
 
-        // Cria as entradas (barras) para cada dia da semana
         for (int i = 0; i < 7; i++) {
             entries.add(new BarEntry(i, contagemPorDia[i]));
         }
 
-        // 2. Criar e customizar o DataSet (a aparência das barras)
         BarDataSet dataSet = new BarDataSet(entries, "Cartas Estudadas");
-        dataSet.setColor(getResources().getColor(R.color.blueStripe)); // Cor das barras
+        dataSet.setColor(getResources().getColor(R.color.blueStripe));
         dataSet.setValueTextColor(getResources().getColor(R.color.black));
         dataSet.setValueTextSize(12f);
 
-        // 3. Colocar os dados no gráfico
         BarData barData = new BarData(dataSet);
-        barData.setBarWidth(0.6f); // Largura das barras (0.0 a 1.0)
+        barData.setBarWidth(0.6f);
         barChart.setData(barData);
 
-        // 4. Customizar a aparência do gráfico
         barChart.getDescription().setEnabled(false);
-        barChart.getAxisRight().setEnabled(false); // Remove o eixo Y da direita
-        barChart.getLegend().setEnabled(false); // Remove a legenda colorida abaixo do gráfico
+        barChart.getAxisRight().setEnabled(false);
+        barChart.getLegend().setEnabled(false);
         barChart.setFitBars(true);
         barChart.setDrawGridBackground(false);
-        barChart.setScaleEnabled(false); // Impede o zoom no gráfico
-        barChart.setExtraBottomOffset(10f); // Adiciona um pequeno espaço na parte inferior
+        barChart.setScaleEnabled(false);
+        barChart.setExtraBottomOffset(10f);
 
-        // Customizar eixo Y (Esquerdo)
         barChart.getAxisLeft().setAxisMinimum(0f);
-        barChart.getAxisLeft().setGranularity(1.0f); // Mostra apenas números inteiros (1, 2, 3...)
+        barChart.getAxisLeft().setGranularity(1.0f);
         barChart.getAxisLeft().setDrawGridLines(false);
         barChart.getAxisLeft().setTextSize(12f);
         barChart.getAxisLeft().setAxisLineColor(getResources().getColor(android.R.color.darker_gray));
         barChart.getAxisLeft().setTextColor(getResources().getColor(android.R.color.darker_gray));
 
-        // Customizar eixo X (Inferior)
         XAxis xAxis = barChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
@@ -219,9 +212,8 @@ public class DashboardActivity extends AppCompatActivity {
             }
         });
 
-        // 5. Animar e atualizar o gráfico
-        barChart.animateY(1500); // Animação vertical das barras
-        barChart.invalidate(); // Atualiza o gráfico na tela
+        barChart.animateY(1500);
+        barChart.invalidate();
     }
 
 }

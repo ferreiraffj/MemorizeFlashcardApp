@@ -18,6 +18,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
+import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -31,6 +32,8 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        SystemUIUtils.hideStatusBar(this);
 
         editTextEmail = findViewById(R.id.edit_text_email_login);
         editTextSenha = findViewById(R.id.edit_text_senha_login);

@@ -65,4 +65,7 @@ public interface FlashcardDAO {
             "GROUP BY dia_estudo " +
             "ORDER BY dia_estudo ASC")
     List<EstudoDiario> getContagemEstudoDiario(String userId, long dataInicio);
+
+    @Query("DELETE FROM flashcard WHERE deckId = :deckId")
+    void deleteByDeckId(String deckId);
 }

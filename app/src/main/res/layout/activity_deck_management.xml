@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F0F4F7"
+    tools:context=".view.DeckManagementActivity">
+
+    <!-- Toolbar no topo -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/toolbarWhiteBg">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar_deck_management"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="Gerenciar Baralhos"
+            app:navigationIcon="@drawable/ic_arrow_back" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Lista de Baralhos -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view_deck_management"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="8dp"
+        tools:listitem="@layout/item_deck_management" />
+
+    <!-- Mensagem para quando não houver baralhos -->
+    <TextView
+        android:id="@+id/tv_no_decks_management"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Nenhum baralho para gerenciar."
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+</LinearLayout>

@@ -9,10 +9,9 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import java.util.ArrayList;
 import com.unip.cc7p33.memorizeflashcardapp.database.BaralhoDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
+import com.unip.cc7p33.memorizeflashcardapp.service.FlashcardService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +23,7 @@ public class BaralhoService {
 
     private final FirebaseFirestore db;
     private BaralhoDAO baralhoDAO;
+    private FlashcardService flashcardService;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
     private Handler mainHandler = new Handler(Looper.getMainLooper());  // Para callbacks na UI thread
 
@@ -33,6 +33,10 @@ public class BaralhoService {
 
     public void setBaralhoDAO(BaralhoDAO dao) {
         this.baralhoDAO = dao;
+    }
+
+    public void setFlashcardService(FlashcardService service) {
+        this.flashcardService = service;
     }
 
     public void criarBaralho(Baralho baralho, String userId, OnCompleteListener<Baralho> listener) {
@@ -88,6 +92,77 @@ public class BaralhoService {
         } else {
             baixarBaralhosDaNuvem(userId, listener);  // Fallback direto se DAO indisponível
         }
+    }
+    
+    public void deleteBaralho(String userId, Baralho baralho, OnCompleteListener<Void> listener) {
+        if (flashcardService == null || baralhoDAO == null) {
+            mainHandler.post(() -> listener.onFailure(new IllegalStateException("Serviços ou DAO não configurados.")));
+            return;
+        }
+
+        // 1. Deletar cartões associados
+        flashcardService.deletarTodasAsCartasDoBaralho(userId, baralho.getBaralhoId(), () -> {
+            Log.d("BaralhoService", "Cartões do baralho " + baralho.getBaralhoId() + " deletados. Deletando o baralho.");
+
+            // 2. Deletar o baralho do Firestore
+            db.collection("users")
+                .document(userId)
+                .collection("baralhos")
+                .document(baralho.getBaralhoId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d("BaralhoService", "Baralho " + baralho.getBaralhoId() + " deletado do Firestore.");
+                    // 3. Deletar o baralho do Room
+                    executorService.execute(() -> {
+                        try {
+                            baralhoDAO.deleteById(baralho.getBaralhoId());
+                            Log.d("BaralhoService", "Baralho " + baralho.getBaralhoId() + " deletado do Room.");
+                            mainHandler.post(() -> listener.onSuccess(null));
+                        } catch (Exception e) {
+                            Log.e("BaralhoService", "Erro ao deletar baralho do Room", e);
+                            mainHandler.post(() -> listener.onFailure(e));
+                        }
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("BaralhoService", "Erro ao deletar baralho do Firestore", e);
+                    mainHandler.post(() -> listener.onFailure(e));
+                });
+        });
+    }
+
+    public void updateNomeBaralho(String userId, Baralho baralho, String novoNome, OnCompleteListener<Baralho> listener) {
+        if (baralhoDAO == null) {
+            mainHandler.post(() -> listener.onFailure(new IllegalStateException("DAO não configurado.")));
+            return;
+        }
+
+        baralho.setNome(novoNome);
+
+        // 1. Atualizar no Firestore
+        db.collection("users")
+            .document(userId)
+            .collection("baralhos")
+            .document(baralho.getBaralhoId())
+            .update("nome", novoNome)
+            .addOnSuccessListener(aVoid -> {
+                Log.d("BaralhoService", "Nome do baralho atualizado no Firestore.");
+                // 2. Atualizar no Room
+                executorService.execute(() -> {
+                    try {
+                        baralhoDAO.update(baralho);
+                        Log.d("BaralhoService", "Nome do baralho atualizado no Room.");
+                        mainHandler.post(() -> listener.onSuccess(baralho));
+                    } catch (Exception e) {
+                        Log.e("BaralhoService", "Erro ao atualizar nome do baralho no Room", e);
+                        mainHandler.post(() -> listener.onFailure(e));
+                    }
+                });
+            })
+            .addOnFailureListener(e -> {
+                Log.e("BaralhoService", "Erro ao atualizar nome do baralho no Firestore", e);
+                mainHandler.post(() -> listener.onFailure(e));
+            });
     }
 
     private void sincronizarBaralhoComNuvem(Baralho baralho, OnCompleteListener<Baralho> listener) {
