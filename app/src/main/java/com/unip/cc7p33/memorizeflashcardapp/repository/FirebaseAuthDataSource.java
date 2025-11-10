@@ -146,6 +146,24 @@ public class FirebaseAuthDataSource implements ICloudAuthDataSource {
                 });
     }
 
+    public void updateUser(Usuario usuario, AuthResultCallback callback) {
+        if (usuario == null || usuario.getUid() == null || usuario.getUid().isEmpty()) {
+            Log.e("FirebaseAuthDataSource", "Tentativa de atualizar usuário com UID nulo ou inválido.");
+            callback.onFailure("Tentativa de atualizar usuário com UID nulo ou inválido.");
+            return;
+        }
+        // Salva o objeto de usuário completo no documento correspondente no Firestore.
+        // O .set() com um objeto POJO sobrescreve o documento inteiro com os novos dados.
+        db.collection("users").document(usuario.getUid())
+                .set(usuario)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d("FirebaseAuthDataSource", "Dados do usuário atualizados com sucesso no Firestore para o UID: " + usuario.getUid());
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("FirebaseAuthDataSource", "Falha ao atualizar dados do usuário no Firestore.", e);
+                });
+    }
+
     @Override
     public void logout() {
         mAuth.signOut();

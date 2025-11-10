@@ -169,9 +169,6 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
                 listaDeBaralhos.addAll(baralhos);
                 baralhoAdapter.notifyDataSetChanged();
                 updateNoDecksMessageVisibility();
-                flashcardService.syncExistingDataToRoom(currentUser.getUid(), () -> {
-                    Log.d("MainActivity", "Sincronização de dados antigos concluída.");
-                });
             }
             @Override
             public void onFailure(Exception e) {

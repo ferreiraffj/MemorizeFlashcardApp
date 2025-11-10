@@ -1,36 +1,33 @@
-package com.unip.cc7p33.memorizeflashcardapp.view;
-
-import android.os.Bundle;
+package com.unip.cc7p33.memorizeflashcardapp.view;import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
-import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
-import com.unip.cc7p33.memorizeflashcardapp.database.BaralhoDAO;
-import com.unip.cc7p33.memorizeflashcardapp.database.FlashcardDAO;
-import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
-import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
-import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
-import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.unip.cc7p33.memorizeflashcardapp.model.EstudoDiario;
+import com.unip.cc7p33.memorizeflashcardapp.service.DashboardService;
 
-import java.util.Calendar;
-import java.util.Comparator;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class DashboardActivity extends AppCompatActivity {
-    private TextView tvOfensiva, tvCartasEstudadas, tvBaralhoTopAcerto, tvBaralhoTopErro, tvBaralhoMaisVisitado;
-    private UsuarioDAO usuarioDAO;
-    private BaralhoDAO baralhoDAO;
-    private FlashcardDAO flashcardDAO;
+    private TextView tvDashboardOfensiva, tvDashboardCartasMaduras, tvDashboardMelhorBaralho, tvDashboardRetencao;
+    private LineChart lineChart;
+    private DashboardService dashboardService;
     private String userId;
 
     @Override
@@ -38,69 +35,168 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
-        usuarioDAO = AppDatabase.getInstance(this).usuarioDAO();
-        baralhoDAO = AppDatabase.getInstance(this).baralhoDAO();
-        flashcardDAO = AppDatabase.getInstance(this).flashcardDAO();
+        // 3. Inicializa o serviço que contém toda a lógica
+        dashboardService = new DashboardService(this);
 
-        tvOfensiva = findViewById(R.id.tv_ofensiva);
-        tvCartasEstudadas = findViewById(R.id.tv_cartas_estudadas);
-        tvBaralhoTopAcerto = findViewById(R.id.tv_baralho_top_acerto);
-        // Adicione os outros TextViews
+        // 4. Conecta os TextViews do layout do dashboard
+        tvDashboardOfensiva = findViewById(R.id.tv_dashboard_ofensiva);
+        tvDashboardCartasMaduras = findViewById(R.id.tv_dashboard_cartas_maduras);
+        tvDashboardMelhorBaralho = findViewById(R.id.tv_dashboard_melhor_baralho);
+        tvDashboardRetencao = findViewById(R.id.tv_dashboard_retencao);
+        lineChart = findViewById(R.id.line_chart_progresso); // << ADICIONAR
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             userId = user.getUid();
-            loadMetrics();
+            loadAllDashboardMetrics();
+        } else {
+            Toast.makeText(this, "Usuário não encontrado. Faça login novamente.", Toast.LENGTH_LONG).show();
+            finish(); // Fecha a activity se não houver usuário logado
         }
     }
 
-    private void loadMetrics() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            // Contador de ofensiva
-            Usuario usuario = usuarioDAO.getUserByUID(userId);
-            int dias = (usuario != null) ? usuario.getDiasConsecutivos() : 0;
+    /**
+     * Orquestra o carregamento de todas as métricas do dashboard,
+     * chamando os métodos correspondentes da DashboardService.
+     */
+    private void loadAllDashboardMetrics() {
+        // Carrega cada métrica individualmente
+        loadOfensiva();
+        loadCartasMaduras();
+        loadMelhorBaralho();
+        loadTaxaRetencao();
+        loadProgressoEstudo();
+    }
 
-            // Cartas estudadas hoje (cartas com proximaRevisao atualizada hoje)
-            long hoje = getStartOfDay();
-            List<Flashcard> cartasHoje = flashcardDAO.getAll().stream()
-                    .filter(c -> c.getProximaRevisao() != null && c.getProximaRevisao().getTime() >= hoje)
-                    .collect(Collectors.toList());
-            int totalEstudadas = cartasHoje.size();
+    private void loadOfensiva() {
+        dashboardService.getOfensiva(userId, new DashboardService.DashboardDataCallback<Integer>() {
+            @Override
+            public void onDataLoaded(Integer data) {
+                // Formata o texto para exibição
+                tvDashboardOfensiva.setText(String.format("%d dias", data));
+            }
 
-            // Baralho com mais acertos (soma de acertos por baralho)
-            List<Baralho> baralhos = baralhoDAO.getByUserId(userId);
-            Baralho topAcerto = baralhos.stream()
-                    .max(Comparator.comparingInt(b -> getTotalAcertos(b.getBaralhoId())))
-                    .orElse(null);
-
-            // Similar para erro e visitas
-            Baralho topErro = baralhos.stream()
-                    .max(Comparator.comparingInt(b -> getTotalErros(b.getBaralhoId())))
-                    .orElse(null);
-            Baralho maisVisitado = baralhos.stream()
-                    .max(Comparator.comparingInt(Baralho::getVisitas))
-                    .orElse(null);
-
-            runOnUiThread(() -> {
-                tvOfensiva.setText("Dias consecutivos: " + dias);
-                tvCartasEstudadas.setText("Cartas estudadas hoje: " + totalEstudadas);
-                tvBaralhoTopAcerto.setText("Baralho com mais acertos: " + (topAcerto != null ? topAcerto.getNome() : "Nenhum"));
-                // Atualize os outros...
-            });
+            @Override
+            public void onError(Exception e) {
+                Log.e("DashboardActivity", "Erro ao carregar ofensiva", e);
+                tvDashboardOfensiva.setText("Erro");
+            }
         });
     }
 
-    private int getTotalAcertos(String deckId) {
-        return flashcardDAO.getByDeckId(deckId).stream().mapToInt(Flashcard::getAcertos).sum();
+    private void loadCartasMaduras() {
+        dashboardService.getCartasMadurasCount(userId, new DashboardService.DashboardDataCallback<Integer>() {
+            @Override
+            public void onDataLoaded(Integer data) {
+                tvDashboardCartasMaduras.setText(String.format("%d cartas", data));
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.e("DashboardActivity", "Erro ao carregar cartas maduras", e);
+                tvDashboardCartasMaduras.setText("Erro");
+            }
+        });
     }
 
-    private int getTotalErros(String deckId) {
-        return flashcardDAO.getByDeckId(deckId).stream().mapToInt(Flashcard::getErros).sum();
+    private void loadMelhorBaralho() {
+        dashboardService.getMelhorBaralho(userId, new DashboardService.DashboardDataCallback<String>() {
+            @Override
+            public void onDataLoaded(String data) {
+                tvDashboardMelhorBaralho.setText(data);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.e("DashboardActivity", "Erro ao carregar melhor baralho", e);
+                tvDashboardMelhorBaralho.setText("Erro");
+            }
+        });
     }
 
-    private long getStartOfDay() {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        return cal.getTimeInMillis();
+    private void loadTaxaRetencao() {
+        dashboardService.getTaxaRetencao(userId, new DashboardService.DashboardDataCallback<Integer>() {
+            @Override
+            public void onDataLoaded(Integer data) {
+                tvDashboardRetencao.setText(String.format("%d%%", data));
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.e("DashboardActivity", "Erro ao carregar taxa de retenção", e);
+                tvDashboardRetencao.setText("Erro");
+            }
+        });
+    }
+
+    private void loadProgressoEstudo() {
+        dashboardService.getProgressoEstudo(userId, new DashboardService.DashboardDataCallback<List<EstudoDiario>>() {
+            @Override
+            public void onDataLoaded(List<EstudoDiario> dados) {
+                if (dados == null || dados.isEmpty()) {
+                    lineChart.clear();
+                    lineChart.setNoDataText("Sem dados de estudo nos últimos 7 dias.");
+                    lineChart.invalidate();
+                    return;
+                }
+                setupLineChart(dados);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.e("DashboardActivity", "Erro ao carregar progresso de estudo", e);
+                lineChart.setNoDataText("Erro ao carregar dados do gráfico.");
+            }
+        });
+    }
+
+    private void setupLineChart(List<EstudoDiario> dados) {
+        ArrayList<Entry> entries = new ArrayList<>();
+        final ArrayList<String> labels = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM", Locale.getDefault());
+
+        long dataReferencia = dados.get(0).diaEstudo.getTime();
+
+        for (EstudoDiario dia : dados) {
+            long diasDesdeReferencia = TimeUnit.MILLISECONDS.toDays(dia.diaEstudo.getTime() - dataReferencia);
+            entries.add(new Entry(diasDesdeReferencia, dia.contagem));
+            labels.add(sdf.format(dia.diaEstudo));
+        }
+
+        LineDataSet dataSet = new LineDataSet(entries, "Cartas Estudadas");
+        dataSet.setColor(getResources().getColor(R.color.blueStripe));
+        dataSet.setValueTextColor(getResources().getColor(R.color.black));
+        dataSet.setCircleColor(getResources().getColor(R.color.blueStripe));
+        dataSet.setLineWidth(2f);
+        dataSet.setValueTextSize(10f);
+
+        LineData lineData = new LineData(dataSet);
+        lineChart.setData(lineData);
+
+        // Customização do eixo X (datas)
+        XAxis xAxis = lineChart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setGranularity(1f);
+        xAxis.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                int index = (int) value;
+                if (index >= 0 && index < labels.size()) {
+                    // Recalcula o índice para corresponder ao da lista de labels
+                    long diasDesdeReferencia = TimeUnit.MILLISECONDS.toDays(dados.get(index).diaEstudo.getTime() - dataReferencia);
+                    if(diasDesdeReferencia == value){
+                        return labels.get(index);
+                    }
+                }
+                return "";
+            }
+        });
+
+        // Customização geral
+        lineChart.getDescription().setEnabled(false);
+        lineChart.getAxisRight().setEnabled(false);
+        lineChart.getAxisLeft().setAxisMinimum(0f);
+        lineChart.animateX(1000);
+        lineChart.invalidate(); // Refresh o gráfico
     }
 }

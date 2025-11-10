@@ -6,4 +6,45 @@
     </style>
 
     <style name="Theme.MemorizeFlashcardApp" parent="Base.Theme.MemorizeFlashcardApp" />
+    <!-- ... outros estilos ... -->
+
+    <style name="DashboardCard" parent="Widget.MaterialComponents.CardView">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="cardCornerRadius">8dp</item>
+    </style>
+
+    <!-- ESTILO CORRIGIDO: Removido o 'parent' -->
+    <style name="DashboardCardContent">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <!-- ESTILO CORRIGIDO: 'app:tint' trocado por 'android:tint' -->
+    <style name="DashboardCardIcon">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:tint">@color/blueStripe</item> <!-- Ajuste a cor conforme necessário -->
+    </style>
+
+    <style name="DashboardCardTitle" parent="Widget.AppCompat.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/grayTxtAuth</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="DashboardCardValue" parent="Widget.AppCompat.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_marginTop">4dp</item>
+    </style>
 </resources>

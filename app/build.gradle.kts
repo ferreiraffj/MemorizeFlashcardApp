@@ -65,6 +65,8 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     annotationProcessor("androidx.room:room-compiler:$room_version")
 
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0") // Dependência para gráficos
+
     // Para testes de unidade
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:4.8.0") // Mockito para simular objetos

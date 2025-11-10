@@ -1,13 +1,17 @@
 package com.unip.cc7p33.memorizeflashcardapp.service;
 
 import android.content.Context;
+import android.util.Log;
 
+import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
 import com.unip.cc7p33.memorizeflashcardapp.database.FlashcardDAO;
 import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.model.RankingInfo;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
+import com.unip.cc7p33.memorizeflashcardapp.repository.FirebaseAuthDataSource;
+import com.unip.cc7p33.memorizeflashcardapp.repository.ICloudAuthDataSource;
 
 import java.util.Calendar;
 import java.util.Collections;
@@ -22,17 +26,15 @@ public class SessaoEstudoService {
     private List<Flashcard> cardList;
     private int currentCardIndex = 0;
     private int correctAnswersCount = 0;
-    private FlashcardDAO flashcardDAO;  // Novo campo para DAO
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();  // Para operações assíncronas
     private boolean estudouHoje = false;
     private Context context;  // Novo: para acessar AppDatabase
+    private ICloudAuthDataSource cloudAuthDataSource;
+    private final FlashcardService flashcardService;
 
-    public void setContext(Context context) {
+    public SessaoEstudoService(Context context, FlashcardService flashcardService) {
         this.context = context;
-    }
-
-    public void setFlashcardDAO(FlashcardDAO dao) {
-        this.flashcardDAO = dao;
+        this.flashcardService = flashcardService;
+        this.cloudAuthDataSource = new FirebaseAuthDataSource();
     }
 
     // Inicia a sessão com a lista de cartas (shuffle incluído)
@@ -62,17 +64,30 @@ public class SessaoEstudoService {
     public void avancarCarta(int quality) {
         Flashcard card = obterCartaAtual();
         if (card != null) {
+            // Atualiza contadores de acertos/erros
             if (quality >= 3) {
                 card.setAcertos(card.getAcertos() + 1);
-                correctAnswersCount++;  // Para estatísticas
+                correctAnswersCount++;
             } else {
                 card.setErros(card.getErros() + 1);
             }
-            SM2Algorithm.applySM2(card, quality);  // Aplica SM2 com quality
+            // Aplica o algoritmo SM2 para calcular o próximo intervalo
+            SM2Algorithm.applySM2(card, quality);
             estudouHoje = true;
-            if (flashcardDAO != null) {
-                executorService.execute(() -> flashcardDAO.update(card));
-            }
+
+            // Delega a atualização para o FlashcardService, que salva no Room E no Firestore
+            flashcardService.updateCarta(card.getUserId(), card.getDeckId(), card, new FlashcardService.OnCompleteListener<Flashcard>() {
+                @Override
+                public void onSuccess(Flashcard result) {
+                    Log.d("SessaoEstudoService", "Carta " + card.getFlashcardId() + " atualizada com sucesso em ambas as fontes.");
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    Log.e("SessaoEstudoService", "Falha ao sincronizar atualização da carta " + card.getFlashcardId(), e);
+                    // Mesmo com falha na nuvem, a atualização no Room (feita pelo updateCarta) deve persistir na sessão atual
+                }
+            });
         }
         currentCardIndex++;
     }
@@ -166,7 +181,7 @@ public class SessaoEstudoService {
         // +10xp por carta estudada
         int xpGanho = getTotalCards() * 10; // Total de cartas da sessão
 
-        executorService.execute(() -> {
+        Executors.newSingleThreadExecutor().execute(() -> {
             UsuarioDAO usuarioDAO = AppDatabase.getInstance(context).usuarioDAO();
             Usuario usuario = usuarioDAO.getUserByUID(userid);
 
@@ -174,7 +189,6 @@ public class SessaoEstudoService {
                 usuario.setXp(usuario.getXp() + xpGanho);
                 usuario.setRanking(SessaoEstudoService.getRankingInfo(usuario.getXp()).getCurrentRankName());
 
-                // A verificação se a ofensiva deve ser incrementada
                 if (!SessaoEstudoService.jaEstudouHoje(usuario.getUltimoEstudo())) {
                     usuario.setOfensiva(usuario.getOfensiva() + 1);
                 }
@@ -186,31 +200,21 @@ public class SessaoEstudoService {
                 hojeInicioDoDia.set(Calendar.MILLISECOND, 0);
                 usuario.setUltimoEstudo(hojeInicioDoDia.getTime());
 
-                // Pega a data do último estudo do usuário. Se nunca estudou, será null.
-                Date ultimoEstudo = usuario.getUltimoEstudo();
-
-                /*
-                * Verifica se a ofensiva deve ser incrementada
-                * Condições:
-                * 1. O usuário NUNCA estudou antes (ultimoEstudo == null)
-                * 2. O último estudo foi ANTES do início do dia de hoje
-                * */
-                if (ultimoEstudo == null || ultimoEstudo.before(hojeInicioDoDia.getTime())) {
-                    // Este é o primeiro estudo de hoje, então incrementa a ofensiva.
-                    usuario.setOfensiva(usuario.getOfensiva() + 1);
-                }
-
-                // Atualiza a data do último estudo para o início do dia de hoje.
-                // Salvar a data zerada garante que qualquer estudo futuro no mesmo dia não incremente a ofensiva novamente.
-                usuario.setUltimoEstudo(hojeInicioDoDia.getTime());
-
                 usuarioDAO.update(usuario);
-            }
-            estudouHoje = false; // Reseta para a próxima sessão
-            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                if (onComplete != null) {
-                    onComplete.run();
+
+                if (cloudAuthDataSource != null) {
+                    cloudAuthDataSource.updateUser(usuario, new ICloudAuthDataSource.AuthResultCallback(){
+                        @Override
+                        public void onSuccess(FirebaseUser user, Usuario userData){}
+                        @Override
+                        public void onFailure(String errorMessage){}
+                    });
+                    Log.d("SessaoEstudoService", "Usuário atualizado no Firestore com sucesso: " + usuario.getUid());
                 }
+            }
+            estudouHoje = false;
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                if (onComplete != null) onComplete.run();
             });
         });
     }
