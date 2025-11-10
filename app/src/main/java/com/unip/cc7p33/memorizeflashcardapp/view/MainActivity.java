@@ -126,8 +126,8 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_perfil) {
-                // Abrir Activity de Perfil (implementar depois)
-                Toast.makeText(this, "Perfil clicado", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, ProfileActivity.class);
+                startActivity(intent);
             } else if (id == R.id.nav_dashboards) {
                 // Abrir Dashboards
                 Intent intent = new Intent(this, DashboardActivity.class);
@@ -140,10 +140,6 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
             return true;
         });
         setupFabs();
-
-//        toolbar.setNavigationOnClickListener(v -> {
-//            Toast.makeText(this, "Ícone de Menu clicado!", Toast.LENGTH_SHORT).show();
-//        });
     }
 
     @Override
