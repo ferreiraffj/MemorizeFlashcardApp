@@ -44,8 +44,12 @@ public interface FlashcardDAO {
     List<Flashcard> getCardsForStudy(String deckId, long now);
 
     // Adicione esta anotação e metodo para contar cartas maduras
-    @Query("SELECT COUNT(*) FROM flashcard WHERE userId = :userId AND facilidade > :diasParaSerMadura")
+    @Query("SELECT COUNT(*) FROM flashcard WHERE userId = :userId AND intervalo >= :diasParaSerMadura")
     int getMatureCardsCount(String userId, int diasParaSerMadura);
+
+    // Adicione este metodo para pegar a lista de cartas maduras
+    @Query("SELECT * FROM flashcard WHERE userId = :userId AND intervalo >= :diasParaSerMadura")
+    List<Flashcard> getMatureCards(String userId, int diasParaSerMadura);
 
     // Adicione este metodo para pegar estatísticas (acertos, erros) de um baralho
     @Query("SELECT SUM(acertos) as total_acertos, SUM(erros) as total_erros FROM flashcard WHERE deckId = :deckId")
@@ -68,4 +72,8 @@ public interface FlashcardDAO {
 
     @Query("DELETE FROM flashcard WHERE deckId = :deckId")
     void deleteByDeckId(String deckId);
+
+    // deletar carta pelo id
+    @Query("DELETE FROM flashcard WHERE flashcardId = :flashcardId")
+    void deleteByCardId(String flashcardId);
 }

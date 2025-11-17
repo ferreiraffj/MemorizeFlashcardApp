@@ -1,14 +1,9 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
-import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -40,8 +35,8 @@ public class AddCardActivity extends AppCompatActivity {
 
     private FlashcardService flashcardService;
     private AuthService authService;
+    private BaralhoService baralhoService; // Adicionado para incrementar contagem
 
-    // Variáveis para o modo de edição
     private boolean isEditMode = false;
     private String editingCardId;
     private String currentDeckId;
@@ -54,9 +49,10 @@ public class AddCardActivity extends AppCompatActivity {
         SystemUIUtils.hideStatusBar(this);
 
         flashcardService = new FlashcardService();
-        flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());  // Adicionado: configura DAO
-
+        flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
         authService = new AuthService(this);
+        baralhoService = new BaralhoService(); // Inicializa o serviço
+        baralhoService.setBaralhoDAO(AppDatabase.getInstance(this).baralhoDAO());
 
         Toolbar toolbar = findViewById(R.id.toolbar_add_card);
         setSupportActionBar(toolbar);
@@ -66,26 +62,19 @@ public class AddCardActivity extends AppCompatActivity {
         editTextFront = findViewById(R.id.edit_text_front);
         editTextBack = findViewById(R.id.edit_text_back);
 
-        // Verifica se estamos em modo de edição
         if (getIntent().hasExtra("EDIT_MODE")) {
             isEditMode = getIntent().getBooleanExtra("EDIT_MODE", false);
             editingCardId = getIntent().getStringExtra("CARD_ID");
             currentDeckId = getIntent().getStringExtra("DECK_ID");
-
             editTextFront.setText(getIntent().getStringExtra("CARD_FRONT"));
             editTextBack.setText(getIntent().getStringExtra("CARD_BACK"));
-
             String deckName = getIntent().getStringExtra("DECK_NAME");
-            ArrayList<String> singleDeckList = new ArrayList<>();
-            singleDeckList.add(deckName);
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, singleDeckList);
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, Collections.singletonList(deckName));
             spinnerDecks.setAdapter(adapter);
-            spinnerDecks.setEnabled(false); // Não pode mudar o baralho ao editar
+            spinnerDecks.setEnabled(false);
         } else {
-            // Modo de criação
             ArrayList<String> deckNames = getIntent().getStringArrayListExtra("DECK_NAMES");
             deckIds = getIntent().getStringArrayListExtra("DECK_IDS");
-
             if (deckNames == null || deckNames.isEmpty()) {
                 deckNames = new ArrayList<>();
                 deckNames.add("Crie um baralho primeiro");
@@ -96,14 +85,12 @@ public class AddCardActivity extends AppCompatActivity {
             spinnerDecks.setAdapter(decksAdapter);
         }
 
-        // Configura o título da Toolbar
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle(isEditMode ? "EDITAR CARTA" : "ADICIONAR CARTAS");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_arrow_back);
         }
 
-        // Configura spinner de tipo (sempre Padrão por enquanto)
         ArrayAdapter<String> cardTypeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, Collections.singletonList("Padrão"));
         cardTypeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerCardType.setAdapter(cardTypeAdapter);
@@ -144,11 +131,9 @@ public class AddCardActivity extends AppCompatActivity {
         }
 
         String userId = currentUser.getUid();
-        Flashcard card;
 
         if (isEditMode) {
-            // Lógica de ATUALIZAÇÃO
-            card = new Flashcard(frontText, backText, currentDeckId, userId);  // Instancia com dados atuais
+            Flashcard card = new Flashcard(frontText, backText, currentDeckId, userId);
             card.setFlashcardId(editingCardId);
             card.setDeckId(currentDeckId);
             flashcardService.updateCarta(userId, currentDeckId, card, new FlashcardService.OnCompleteListener<Flashcard>() {
@@ -164,7 +149,6 @@ public class AddCardActivity extends AppCompatActivity {
                 }
             });
         } else {
-            // Lógica de CRIAÇÃO
             if (deckIds == null || deckIds.isEmpty()) {
                 Toast.makeText(this, "Você precisa criar um baralho antes.", Toast.LENGTH_LONG).show();
                 return;
@@ -172,21 +156,19 @@ public class AddCardActivity extends AppCompatActivity {
             int selectedDeckPosition = spinnerDecks.getSelectedItemPosition();
             String selectedDeckId = deckIds.get(selectedDeckPosition);
 
-            card = new Flashcard(frontText, backText, selectedDeckId, userId);  // Instancia com selectedDeckId
+            Flashcard card = new Flashcard(frontText, backText, selectedDeckId, userId);
 
             flashcardService.adicionarCarta(userId, selectedDeckId, card, new FlashcardService.OnCompleteListener<Flashcard>() {
                 @Override
                 public void onSuccess(Flashcard result) {
-                    new BaralhoService().incrementarContagem(userId, selectedDeckId)
-                            .addOnCompleteListener(task -> {
-                                Toast.makeText(AddCardActivity.this, "Carta salva com sucesso!", Toast.LENGTH_SHORT).show();
-                                // 1. Limpa os campos de texto para a próxima carta
-                                editTextFront.setText("");
-                                editTextBack.setText("");
+                    // A UI é atualizada IMEDIATAMENTE após o sucesso local.
+                    Toast.makeText(AddCardActivity.this, "Carta salva com sucesso!", Toast.LENGTH_SHORT).show();
+                    editTextFront.setText("");
+                    editTextBack.setText("");
+                    editTextFront.requestFocus();
 
-                                // 2. Coloca o foco de volta no primeiro campo para facilitar a digitação
-                                editTextFront.requestFocus();
-                            });
+                    // A sincronização da contagem online acontece em segundo plano.
+                    baralhoService.incrementarContagem(userId, selectedDeckId);
                 }
                 @Override
                 public void onFailure(Exception e) {
@@ -196,8 +178,4 @@ public class AddCardActivity extends AppCompatActivity {
             });
         }
     }
-
-
-
-
 }

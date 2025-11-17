@@ -73,7 +73,9 @@
             </androidx.cardview.widget.CardView>
 
             <!-- Card 2: Cartas Maduras -->
-            <androidx.cardview.widget.CardView style="@style/DashboardCard">
+            <androidx.cardview.widget.CardView 
+                android:id="@+id/card_conhecimento_solido"
+                style="@style/DashboardCard">
                 <LinearLayout style="@style/DashboardCardContent">
                     <ImageView style="@style/DashboardCardIcon" android:src="@drawable/ic_brain"/> <!-- Crie este ícone -->
                     <TextView style="@style/DashboardCardTitle" android:text="Conhecimento Sólido"/>

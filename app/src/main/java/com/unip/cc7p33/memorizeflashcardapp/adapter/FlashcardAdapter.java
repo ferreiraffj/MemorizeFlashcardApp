@@ -3,7 +3,7 @@ package com.unip.cc7p33.memorizeflashcardapp.adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton; // Adicione este import
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,15 +12,18 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class FlashcardAdapter extends RecyclerView.Adapter<FlashcardAdapter.FlashcardViewHolder> {
 
     private List<Flashcard> flashcards;
     private OnItemClickListener listener;
-    private OnDeleteClickListener deleteListener; // <-- ADICIONADO para o clique de deletar
+    private OnDeleteClickListener deleteListener;
 
-    // Interface para o clique de edição (já existente)
     public interface OnItemClickListener {
         void onItemClick(Flashcard card);
     }
@@ -29,8 +32,6 @@ public class FlashcardAdapter extends RecyclerView.Adapter<FlashcardAdapter.Flas
         this.listener = listener;
     }
 
-    // --- INÍCIO DO CÓDIGO NOVO ---
-    // Interface para o clique de exclusão
     public interface OnDeleteClickListener {
         void onDeleteClick(Flashcard card, int position);
     }
@@ -38,7 +39,6 @@ public class FlashcardAdapter extends RecyclerView.Adapter<FlashcardAdapter.Flas
     public void setOnDeleteClickListener(OnDeleteClickListener listener) {
         this.deleteListener = listener;
     }
-    // --- FIM DO CÓDIGO NOVO ---
 
     public FlashcardAdapter(List<Flashcard> flashcards) {
         this.flashcards = flashcards;
@@ -56,21 +56,36 @@ public class FlashcardAdapter extends RecyclerView.Adapter<FlashcardAdapter.Flas
         Flashcard card = flashcards.get(position);
         holder.textViewFront.setText(card.getFrente());
 
-        // Clique no item inteiro para editar (já existente)
+        // Lógica de exibição da próxima revisão
+        if (card.getProximaRevisao() != null) {
+            Date proximaRevisao = card.getProximaRevisao();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+            holder.textViewNextReview.setText("Próxima revisão: " + sdf.format(proximaRevisao));
+
+            long diff = proximaRevisao.getTime() - new Date().getTime();
+            long diasRestantes = TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
+
+            if (diasRestantes >= 0) {
+                holder.textViewDaysLeft.setText(String.format("(em %d dias)", diasRestantes));
+            } else {
+                holder.textViewDaysLeft.setText("(Vencido)");
+            }
+        } else {
+            holder.textViewNextReview.setText("");
+            holder.textViewDaysLeft.setText("");
+        }
+
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onItemClick(card);
             }
         });
 
-        // --- INÍCIO DA ALTERAÇÃO NO MÉTODO ---
-        // Clique apenas no botão de lixeira para deletar
         holder.deleteButton.setOnClickListener(v -> {
             if (deleteListener != null) {
                 deleteListener.onDeleteClick(card, position);
             }
         });
-        // --- FIM DA ALTERAÇÃO NO MÉTODO ---
     }
 
     @Override
@@ -80,12 +95,16 @@ public class FlashcardAdapter extends RecyclerView.Adapter<FlashcardAdapter.Flas
 
     static class FlashcardViewHolder extends RecyclerView.ViewHolder {
         TextView textViewFront;
-        ImageButton deleteButton; // <-- ADICIONADO
+        TextView textViewNextReview; // Novo
+        TextView textViewDaysLeft;   // Novo
+        ImageButton deleteButton;
 
         public FlashcardViewHolder(@NonNull View itemView) {
             super(itemView);
             textViewFront = itemView.findViewById(R.id.text_view_card_front);
-            deleteButton = itemView.findViewById(R.id.button_delete_card); // <-- ADICIONADO
+            textViewNextReview = itemView.findViewById(R.id.text_view_next_review); // Novo
+            textViewDaysLeft = itemView.findViewById(R.id.text_view_days_left);     // Novo
+            deleteButton = itemView.findViewById(R.id.button_delete_card);
         }
     }
 }
