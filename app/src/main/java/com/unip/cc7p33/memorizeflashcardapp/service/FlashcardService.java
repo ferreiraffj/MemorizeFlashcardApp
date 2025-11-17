@@ -8,8 +8,6 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
-import com.google.firebase.firestore.Query;
 
 import com.unip.cc7p33.memorizeflashcardapp.database.FlashcardDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
@@ -25,7 +23,7 @@ public class FlashcardService {
     private final FirebaseFirestore db;
     private FlashcardDAO flashcardDAO;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private Handler mainHandler = new Handler(Looper.getMainLooper());  // Para callbacks na UI
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public FlashcardService() {
         db = FirebaseFirestore.getInstance();
@@ -36,58 +34,50 @@ public class FlashcardService {
     }
 
     public void adicionarCarta(String userId, String deckId, Flashcard card, OnCompleteListener<Flashcard> listener) {
-        // 1. Pega uma referência para um novo documento no Firestore.
-        com.google.firebase.firestore.DocumentReference newCardRef = db.collection("users").document(userId)
-                .collection("baralhos").document(deckId)
-                .collection("flashcards").document();
+        if (flashcardDAO == null) {
+            listener.onFailure(new Exception("DAO não configurado."));
+            return;
+        }
 
-        // 2. Define o ID gerado pelo Firebase no seu objeto Flashcard.
-        card.setFlashcardId(newCardRef.getId());
-        // Garante que o deckId também está no objeto
+        // 1. Gera ID único localmente
+        if (card.getFlashcardId() == null || card.getFlashcardId().isEmpty()) {
+            card.setFlashcardId(UUID.randomUUID().toString());
+        }
         card.setDeckId(deckId);
+        card.setUserId(userId); // Garante que o ID do usuário está na carta
 
-        // 3. Salva o objeto COMPLETO (já com o ID) no Firebase.
-        newCardRef.set(card)
-                .addOnSuccessListener(aVoid -> {
-                    Log.d("FlashcardService", "Carta salva no Firebase com ID: " + card.getFlashcardId());
+        executorService.execute(() -> {
+            try {
+                // 2. Salva no banco de dados local (Room)
+                flashcardDAO.insert(card);
+                Log.d("FlashcardService", "Carta salva no Room com ID: " + card.getFlashcardId());
 
-                    // 4. Se o Firebase teve sucesso, salva a MESMA CARTA no Room.
-                    if (flashcardDAO != null) {
-                        executorService.execute(() -> {
-                            try {
-                                flashcardDAO.insert(card);
-                                Log.d("FlashcardService", "Carta salva no Room com ID: " + card.getFlashcardId());
-                                // 5. Notifica a UI que tudo deu certo.
-                                mainHandler.post(() -> listener.onSuccess(card));
-                            } catch (Exception e) {
-                                Log.e("FlashcardService", "Erro ao inserir no Room após sucesso no Firebase", e);
-                                mainHandler.post(() -> listener.onFailure(e));
-                            }
-                        });
-                    } else {
-                        mainHandler.post(() -> listener.onSuccess(card));
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("FlashcardService", "Erro ao salvar no Firebase", e);
-                    mainHandler.post(() -> listener.onFailure(e));
-                });
+                // 3. Notifica a UI IMEDIATAMENTE
+                mainHandler.post(() -> listener.onSuccess(card));
+
+                // 4. Tenta sincronizar com a nuvem em segundo plano
+                db.collection("users").document(userId)
+                  .collection("baralhos").document(deckId)
+                  .collection("flashcards").document(card.getFlashcardId())
+                  .set(card)
+                  .addOnSuccessListener(aVoid -> Log.d("FlashcardService", "Carta '" + card.getFrente() + "' sincronizada com a nuvem."))
+                  .addOnFailureListener(e -> Log.w("FlashcardService", "Falha ao sincronizar carta. Será tentado na próxima vez.", e));
+
+            } catch (Exception e) {
+                Log.e("FlashcardService", "Erro ao salvar carta no Room", e);
+                mainHandler.post(() -> listener.onFailure(e));
+            }
+        });
     }
 
     public void updateCarta(String userId, String deckId, Flashcard card, OnCompleteListener<Flashcard> listener) {
-        // 1. Atualiza no banco de dados local (Room)
         if (flashcardDAO != null) {
-            executorService.execute(() -> {
-                flashcardDAO.update(card);
-            });
+            executorService.execute(() -> flashcardDAO.update(card));
         }
 
-        // 2. Atualiza no Firestore usando o caminho correto
         db.collection("users").document(userId)
-                // ----- CORREÇÃO AQUI -----
                 .collection("baralhos").document(deckId)
-                .collection("flashcards").document(card.getFlashcardId()) // Usa o ID (String) do objeto
-                // -------------------------
+                .collection("flashcards").document(card.getFlashcardId())
                 .set(card)
                 .addOnSuccessListener(aVoid -> mainHandler.post(() -> listener.onSuccess(card)))
                 .addOnFailureListener(e -> {
@@ -97,21 +87,13 @@ public class FlashcardService {
     }
 
     public void deletarCarta(String userId, String deckId, String cardId, OnCompleteListener<Void> listener) {
-        // 1. Deleta do banco de dados local (Room)
         if (flashcardDAO != null) {
-            executorService.execute(() -> {
-                // Busca o objeto pelo ID (String) para deletar
-                // ATENÇÃO: getById(int) não funciona mais. Precisamos de um novo método no DAO.
-                // Por enquanto, vamos focar na correção do Firestore. A deleção local precisará de ajuste.
-            });
+             executorService.execute(() -> flashcardDAO.deleteByCardId(cardId)); // Assumindo que você tem ou criará este método no DAO
         }
 
-        // 2. Deleta do Firestore usando o caminho correto
         db.collection("users").document(userId)
-                // ----- CORREÇÃO AQUI -----
                 .collection("baralhos").document(deckId)
-                .collection("flashcards").document(cardId) // cardId já é a String correta
-                // -------------------------
+                .collection("flashcards").document(cardId)
                 .delete()
                 .addOnSuccessListener(aVoid -> mainHandler.post(() -> listener.onSuccess(null)))
                 .addOnFailureListener(e -> {
@@ -127,59 +109,47 @@ public class FlashcardService {
         }
 
         db.collection("users").document(userId).collection("baralhos").get()
-                // -------------------------
-                .addOnSuccessListener(decksSnapshot -> {
-                    if (decksSnapshot.isEmpty()) {
-                        if (onComplete != null) onComplete.run();
-                        return;
-                    }
-                    for (var deckDoc : decksSnapshot.getDocuments()) {
-                        String deckId = deckDoc.getId();
-                        // ----- CORREÇÃO AQUI -----
-                        deckDoc.getReference().collection("flashcards").get()
-                                // -------------------------
-                                .addOnSuccessListener(cardsSnapshot -> {
-                                    if (cardsSnapshot.isEmpty()) return;
-                                    executorService.execute(() -> {
-                                        for (var cardDoc : cardsSnapshot.getDocuments()) {
-                                            Flashcard card = cardDoc.toObject(Flashcard.class);
-                                            if (card != null && card.getFlashcardId() != null) {
-                                                // A lógica de verificação de duplicatas pode ser melhorada,
-                                                // mas por enquanto a correção do caminho é o principal.
-                                                flashcardDAO.insert(card); // Idealmente, usar insert com OnConflictStrategy.REPLACE
-                                            }
-                                        }
-                                    });
-                                });
-                    }
-                    if (onComplete != null) {
-                        // Executa o onComplete após iniciar as buscas, não espera a conclusão.
-                        mainHandler.post(onComplete);
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("FlashcardService", "Erro na sincronização de baralhos", e);
-                    if (onComplete != null) mainHandler.post(onComplete);
-                });
+            .addOnSuccessListener(decksSnapshot -> {
+                if (decksSnapshot.isEmpty()) {
+                    if (onComplete != null) onComplete.run();
+                    return;
+                }
+                for (var deckDoc : decksSnapshot.getDocuments()) {
+                    deckDoc.getReference().collection("flashcards").get()
+                        .addOnSuccessListener(cardsSnapshot -> {
+                            if (cardsSnapshot.isEmpty()) return;
+                            executorService.execute(() -> {
+                                List<Flashcard> cardsToInsert = new ArrayList<>();
+                                for (var cardDoc : cardsSnapshot.getDocuments()) {
+                                    Flashcard card = cardDoc.toObject(Flashcard.class);
+                                    if (card != null && card.getFlashcardId() != null) {
+                                        cardsToInsert.add(card);
+                                    }
+                                }
+                                flashcardDAO.insertAll(cardsToInsert);
+                            });
+                        });
+                }
+                if (onComplete != null) {
+                    mainHandler.post(onComplete);
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("FlashcardService", "Erro na sincronização de baralhos", e);
+                if (onComplete != null) mainHandler.post(onComplete);
+            });
     }
 
-    // ##### NOVO METODO PARA SINCRONIZAÇÃO INTELIGENTE #####
-    /**
-     * Busca os flashcards de um baralho específico no Firestore,
-     * salva-os no banco de dados local (Room) e retorna a lista.
-     */
     public void fetchAndSaveCardsFromDeck(String userId, String deckId, OnCompleteListener<List<Flashcard>> listener) {
         if (flashcardDAO == null) {
             listener.onFailure(new IllegalStateException("FlashcardDAO não foi inicializado."));
             return;
         }
 
-        // 1. Busca os flashcards do baralho específico no Firestore
         db.collection("users").document(userId)
-                .collection("baralhos").document(deckId) // Caminho CORRETO
-                .collection("flashcards").get() // Caminho CORRETO
+                .collection("baralhos").document(deckId)
+                .collection("flashcards").get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    // 2. Converte os documentos em objetos Flashcard
                     List<Flashcard> firestoreCards = new ArrayList<>();
                     for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
                         Flashcard card = doc.toObject(Flashcard.class);
@@ -187,14 +157,8 @@ public class FlashcardService {
                             firestoreCards.add(card);
                         }
                     }
-
-                    // 3. Salva a lista inteira no Room em uma thread de background
                     executorService.execute(() -> {
-                        // O metodo insert do DAO agora aceita uma lista, o que é mais eficiente
                         flashcardDAO.insertAll(firestoreCards);
-                        Log.d("FlashcardService", "Sincronizadas " + firestoreCards.size() + " cartas do Firestore para o Room.");
-
-                        // 4. Retorna a lista para a UI na thread principal
                         mainHandler.post(() -> listener.onSuccess(firestoreCards));
                     });
                 })
@@ -205,7 +169,6 @@ public class FlashcardService {
     }
 
     public void deletarTodasAsCartasDoBaralho(String userId, String deckId, Runnable onComplete) {
-        // Deleta do Firestore
         db.collection("users").document(userId)
                 .collection("baralhos").document(deckId)
                 .collection("flashcards").get().addOnCompleteListener(task -> {
@@ -216,7 +179,6 @@ public class FlashcardService {
                     }
                 });
 
-        // Deleta do Room
         if (flashcardDAO != null) {
             executorService.execute(() -> {
                 flashcardDAO.deleteByDeckId(deckId);

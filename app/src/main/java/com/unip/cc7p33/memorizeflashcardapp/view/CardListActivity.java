@@ -141,7 +141,12 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
             @Override
             public void onFailure(Exception e) {
                 Log.e("CardListActivity", "Erro ao sincronizar cartas.", e);
-                Toast.makeText(CardListActivity.this, "Erro ao buscar cartas.", Toast.LENGTH_SHORT).show();
+                // Verifica se a lista local de cartas está vazia
+                if (cardList.isEmpty()) {
+                    Toast.makeText(CardListActivity.this, "Nenhuma carta neste baralho ainda.", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(CardListActivity.this, "Erro ao buscar cartas.", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

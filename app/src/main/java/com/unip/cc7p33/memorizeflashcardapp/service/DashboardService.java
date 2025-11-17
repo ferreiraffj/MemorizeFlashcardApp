@@ -9,6 +9,7 @@ import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
 import com.unip.cc7p33.memorizeflashcardapp.model.DeckStats;
 import com.unip.cc7p33.memorizeflashcardapp.model.EstudoDiario;
+import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;  // Adicionado
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 
 import java.util.Calendar;
@@ -23,7 +24,6 @@ public class DashboardService {
     private final BaralhoDAO baralhoDAO;
     private final ExecutorService executor;
 
-    // Construtor que recebe as dependências (DAOs)
     public DashboardService(Context context) {
         AppDatabase db = AppDatabase.getInstance(context);
         this.usuarioDAO = db.usuarioDAO();
@@ -32,20 +32,15 @@ public class DashboardService {
         this.executor = Executors.newSingleThreadExecutor();
     }
 
-    // Interface para o callback que retornará o resultado das buscas
     public interface DashboardDataCallback<T> {
         void onDataLoaded(T data);
         void onError(Exception e);
     }
 
-    // --- MÉTODOS PARA BUSCAR AS MÉTRICAS ---
-
-    // 1. Buscar a Ofensiva (simples, busca o usuário)
     public void getOfensiva(String userId, DashboardDataCallback<Integer> callback) {
         executor.execute(() -> {
             try {
                 Usuario usuario = usuarioDAO.getUserByUID(userId);
-                // Posta o resultado na thread principal
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                     if (usuario != null) {
                         callback.onDataLoaded(usuario.getOfensiva());
@@ -59,9 +54,8 @@ public class DashboardService {
         });
     }
 
-    // 2. Calcular Cartas Maduras
     public void getCartasMadurasCount(String userId, DashboardDataCallback<Integer> callback) {
-        final int DIAS_PARA_SER_MADURA = 21; // Definimos que uma carta é "madura" após 21 dias de intervalo
+        final int DIAS_PARA_SER_MADURA = 21;
         executor.execute(() -> {
             try {
                 int count = flashcardDAO.getMatureCardsCount(userId, DIAS_PARA_SER_MADURA);
@@ -72,7 +66,19 @@ public class DashboardService {
         });
     }
 
-    // 3. Encontrar o Melhor Baralho (maior taxa de acertos)
+    // 6. Buscar a lista de Cartas Maduras
+    public void getMatureCards(String userId, DashboardDataCallback<List<Flashcard>> callback) {
+        final int DIAS_PARA_SER_MADURA = 21;
+        executor.execute(() -> {
+            try {
+                List<Flashcard> matureCards = flashcardDAO.getMatureCards(userId, DIAS_PARA_SER_MADURA);
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onDataLoaded(matureCards));
+            } catch (Exception e) {
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(e));
+            }
+        });
+    }
+
     public void getMelhorBaralho(String userId, DashboardDataCallback<String> callback) {
         executor.execute(() -> {
             try {
@@ -85,14 +91,12 @@ public class DashboardService {
                 Baralho melhorBaralho = null;
                 double maiorTaxa = -1.0;
 
-                // ##### INÍCIO DA CORREÇÃO #####
                 for (Baralho baralho : baralhos) {
                     DeckStats stats = flashcardDAO.getDeckStats(baralho.getBaralhoId());
                     int totalAcertos = (stats != null) ? stats.totalAcertos : 0;
                     int totalErros = (stats != null) ? stats.totalErros : 0;
                     int totalRespostas = totalAcertos + totalErros;
 
-                    // Adiciona a verificação para evitar divisão por zero
                     if (totalRespostas > 0) {
                         double taxaAtual = (double) totalAcertos / totalRespostas;
                         if (taxaAtual > maiorTaxa) {
@@ -100,11 +104,10 @@ public class DashboardService {
                             melhorBaralho = baralho;
                         }
                     }
-                } // A chave do 'for' agora fecha no lugar certo.
+                }
 
                 final String nomeMelhorBaralho = (melhorBaralho != null) ? melhorBaralho.getNome() : "Nenhum";
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onDataLoaded(nomeMelhorBaralho));
-                // ##### FIM DA CORREÇÃO #####
 
             } catch (Exception e) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(e));
@@ -112,11 +115,9 @@ public class DashboardService {
         });
     }
 
-    // 4. Calcular Taxa de Retenção Estimada
     public void getTaxaRetencao(String userId, DashboardDataCallback<Integer> callback) {
         executor.execute(() -> {
             try {
-                // Estatísticas de cartas que já foram revisadas pelo menos uma vez
                 DeckStats stats = flashcardDAO.getReviewedCardsStats(userId);
                 int acertosRevisao = (stats != null) ? stats.totalAcertos : 0;
                 int errosRevisao = (stats != null) ? stats.totalErros : 0;
@@ -135,11 +136,9 @@ public class DashboardService {
         });
     }
 
-    // 5. Buscar dados para o gráfico de progresso
     public void getProgressoEstudo(String userId, DashboardDataCallback<List<EstudoDiario>> callback) {
         executor.execute(() -> {
             try {
-                // Define a data de início para 7 dias atrás
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_YEAR, -7);
                 long dataInicio = calendar.getTimeInMillis();

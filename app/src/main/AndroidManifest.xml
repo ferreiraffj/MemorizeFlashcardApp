@@ -50,6 +50,9 @@
             android:name=".view.CardListActivity"
             android:exported="false" />
         <activity
+            android:name=".view.MatureCardsActivity"
+            android:exported="false" />
+        <activity
             android:name=".view.LoginActivity"
             android:exported="true">
             <intent-filter>

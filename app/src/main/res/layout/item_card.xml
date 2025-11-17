@@ -11,22 +11,46 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/text_view_card_front"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:padding="16dp"
             android:text="Frente do Card"
             android:textColor="@color/black"
             android:textSize="16sp" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:id="@+id/text_view_next_review"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Próxima revisão: dd/MM/yyyy"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/text_view_days_left"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="(em X dias)"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
         <ImageButton
             android:id="@+id/button_delete_card"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:layout_gravity="end"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Deletar carta"
             android:padding="12dp"

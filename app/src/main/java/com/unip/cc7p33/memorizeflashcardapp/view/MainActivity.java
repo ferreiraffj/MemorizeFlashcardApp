@@ -27,6 +27,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.adapter.BaralhoAdapter;
@@ -62,6 +63,11 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     private BaralhoService baralhoService;
     private FlashcardService flashcardService;
 
+    // Firebase Auth Listener
+    private FirebaseAuth mAuth;
+    private FirebaseAuth.AuthStateListener mAuthListener;
+    private String currentUserId;
+
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,18 +76,71 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
 
         SystemUIUtils.hideStatusBar(this);
 
+        // Inicialização dos serviços
         authService = new AuthService(this);
         baralhoService = new BaralhoService();
         baralhoService.setBaralhoDAO(AppDatabase.getInstance(this).baralhoDAO());
         flashcardService = new FlashcardService();
         flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
 
+        // Inicialização do Firebase Auth
+        mAuth = FirebaseAuth.getInstance();
+
+        // Setup da UI
         Toolbar toolbar = findViewById(R.id.toolbar_main);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
+        setupViews();
+        DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
+        setupNavigationDrawer(toolbar, drawerLayout);
+        setupFabs();
+        setupSwipeToRefresh();
+        
+        // Configura o AuthStateListener
+        setupAuthListener();
+    }
+
+    private void setupAuthListener() {
+        mAuthListener = firebaseAuth -> {
+            FirebaseUser user = firebaseAuth.getCurrentUser();
+            if (user != null) {
+                // Usuário está logado (online ou offline)
+                Log.d("MainActivity", "onAuthStateChanged:signed_in:" + user.getUid());
+                currentUserId = user.getUid();
+                // Somente carregue os dados DEPOIS de confirmar o usuário
+                loadInitialData();
+            } else {
+                // Usuário não está logado
+                Log.d("MainActivity", "onAuthStateChanged:signed_out");
+                // Redireciona para a tela de login
+                Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            }
+        };
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        // Anexa o listener ao iniciar a activity
+        mAuth.addAuthStateListener(mAuthListener);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        // Remove o listener ao parar a activity para evitar memory leaks
+        if (mAuthListener != null) {
+            mAuth.removeAuthStateListener(mAuthListener);
+        }
+    }
+
+    private void setupViews() {
         swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         recyclerView = findViewById(R.id.recycler_view_decks);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -97,18 +156,23 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         baralhoAdapter = new BaralhoAdapter(listaDeBaralhos, AppDatabase.getInstance(this).baralhoDAO());
         baralhoAdapter.setOnItemClickListener(this);
         recyclerView.setAdapter(baralhoAdapter);
+    }
 
-        DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
-        setupNavigationDrawer(toolbar, drawerLayout);
-        setupFabs();
-        setupSwipeToRefresh();
+    private void loadInitialData() {
+        if (currentUserId == null) return;
+        updateOfensivaERanking();
+        carregarBaralhos();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        updateOfensivaERanking();
-        carregarBaralhos();
+        // A carga de dados agora é iniciada pelo AuthStateListener.
+        // Podemos manter chamadas aqui se quisermos que a tela sempre atualize ao voltar, 
+        // mas garantindo que o `currentUserId` não seja nulo.
+        if (currentUserId != null) {
+            loadInitialData();
+        }
     }
 
     private void setupNavigationDrawer(Toolbar toolbar, DrawerLayout drawerLayout) {
@@ -145,19 +209,17 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     }
 
     private void forceSyncFromServer() {
-        FirebaseUser currentUser = authService.getCurrentUser();
-        if (currentUser == null) {
+        if (currentUserId == null) {
             swipeRefreshLayout.setRefreshing(false);
             return;
         }
-
         swipeRefreshLayout.setRefreshing(true);
 
-        baralhoService.baixarBaralhosDaNuvem(currentUser.getUid(), new BaralhoService.OnCompleteListener<List<Baralho>>() {
+        baralhoService.baixarBaralhosDaNuvem(currentUserId, new BaralhoService.OnCompleteListener<List<Baralho>>() {
             @Override
             public void onSuccess(List<Baralho> baralhos) {
-                flashcardService.syncExistingDataToRoom(currentUser.getUid(), () -> {
-                    Log.d("MainActivity", "Sincronização de cartões finalizada. Recarregando da base local.");
+                flashcardService.syncExistingDataToRoom(currentUserId, () -> {
+                    Log.d("MainActivity", "Sincronização de cartões finalizada.");
                     runOnUiThread(() -> {
                         carregarBaralhos();
                         swipeRefreshLayout.setRefreshing(false);
@@ -176,13 +238,8 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     }
 
     private void carregarBaralhos() {
-        FirebaseUser currentUser = authService.getCurrentUser();
-        if (currentUser == null) return;
-
-        noDecksMessage.setVisibility(View.GONE);
-        recyclerView.setVisibility(View.GONE);
-
-        baralhoService.getBaralhos(currentUser.getUid(), new BaralhoService.OnCompleteListener<List<Baralho>>() {
+        if (currentUserId == null) return;
+        baralhoService.getBaralhos(currentUserId, new BaralhoService.OnCompleteListener<List<Baralho>>() {
             @Override
             public void onSuccess(List<Baralho> baralhos) {
                 listaDeBaralhos.clear();
@@ -207,10 +264,9 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
         builder.setView(dialogView)
                 .setPositiveButton("Ok", (dialog, id) -> {
                 String deckName = editTextDeckName.getText().toString().trim();
-                FirebaseUser currentUser = authService.getCurrentUser();
-                if (!deckName.isEmpty() && currentUser != null) {
-                    Baralho novoBaralho = new Baralho(deckName, 0, currentUser.getUid());
-                    baralhoService.criarBaralho(novoBaralho, currentUser.getUid(), new BaralhoService.OnCompleteListener<Baralho>() {
+                if (!deckName.isEmpty() && currentUserId != null) {
+                    Baralho novoBaralho = new Baralho(deckName, 0, currentUserId);
+                    baralhoService.criarBaralho(novoBaralho, currentUserId, new BaralhoService.OnCompleteListener<Baralho>() {
                         @Override
                         public void onSuccess(Baralho baralho) {
                             Toast.makeText(MainActivity.this, "Baralho '" + deckName + "' criado!", Toast.LENGTH_SHORT).show();
@@ -240,12 +296,7 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.action_logout) {
-            authService.logout();
-            Toast.makeText(this, "Você saiu da sua conta.", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
+            authService.logout(); // O AuthStateListener cuidará do redirecionamento
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -328,12 +379,11 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     }
 
     private void updateOfensivaERanking() {
-        FirebaseUser user = authService.getCurrentUser();
-        if (user == null) return;
+        if (currentUserId == null) return;
 
         Executors.newSingleThreadExecutor().execute(() -> {
             UsuarioDAO usuarioDAO = AppDatabase.getInstance(this).usuarioDAO();
-            Usuario usuario = usuarioDAO.getUserByUID(user.getUid());
+            Usuario usuario = usuarioDAO.getUserByUID(currentUserId);
 
             if (usuario != null) {
                 final boolean estudouHoje = SessaoEstudoService.jaEstudouHoje(usuario.getUltimoEstudo());
