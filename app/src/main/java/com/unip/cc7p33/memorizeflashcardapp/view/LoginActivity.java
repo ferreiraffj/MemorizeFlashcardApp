@@ -1,6 +1,9 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -9,16 +12,24 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.core.content.ContextCompat;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 import com.unip.cc7p33.memorizeflashcardapp.service.AuthService;
+import com.unip.cc7p33.memorizeflashcardapp.service.NotificationWorker;
 import com.unip.cc7p33.memorizeflashcardapp.utils.SystemUIUtils;
+
+import java.util.concurrent.TimeUnit;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -27,6 +38,16 @@ public class LoginActivity extends AppCompatActivity {
     private TextView textViewEsqueciSenha, textViewRegistrarAgora;
     private ProgressBar progressBar;
     private AuthService authService;
+    private String currentUserId;
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+        if (isGranted) {
+            scheduleReviewNotification();
+        } else {
+            Toast.makeText(this, "Permissão de notificação negada.", Toast.LENGTH_SHORT).show();
+        }
+        redirectToMain();
+    });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,9 +65,8 @@ public class LoginActivity extends AppCompatActivity {
 
         authService = new AuthService(this);
 
-        // Redireciona para a tela principal se o usuário já estiver logado
         if (authService.getCurrentUser() != null) {
-            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+            redirectToMain();
             finish();
         }
 
@@ -69,10 +89,8 @@ public class LoginActivity extends AppCompatActivity {
                         progressBar.setVisibility(View.GONE);
                         btnLogin.setEnabled(true);
                         Toast.makeText(LoginActivity.this, "Bem-vindo, " + usuario.getNome() + "!", Toast.LENGTH_SHORT).show();
-
-                        // Redireciona para a tela principal
-                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
-                        finish();
+                        currentUserId = usuario.getUid();
+                        requestNotificationPermission();
                     });
                 }
 
@@ -95,5 +113,45 @@ public class LoginActivity extends AppCompatActivity {
             startActivity(new Intent(LoginActivity.this, ResetActivity.class));
         });
 
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            } else {
+                scheduleReviewNotification();
+                redirectToMain();
+            }
+        } else {
+            scheduleReviewNotification();
+            redirectToMain();
+        }
+    }
+
+    private void scheduleReviewNotification() {
+        if (currentUserId == null || currentUserId.isEmpty()) {
+            return;
+        }
+
+        Data inputData = new Data.Builder()
+                .putString(NotificationWorker.USER_ID_KEY, currentUserId)
+                .build();
+
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+                .build();
+
+        PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(NotificationWorker.class, 8, TimeUnit.HOURS)
+                .setInputData(inputData)
+                .setConstraints(constraints)
+                .build();
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork("reviewNotificationWork", ExistingPeriodicWorkPolicy.KEEP, workRequest);
+    }
+
+    private void redirectToMain(){
+        startActivity(new Intent(LoginActivity.this, MainActivity.class));
+        finish();
     }
 }

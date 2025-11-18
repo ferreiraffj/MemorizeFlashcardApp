@@ -1,6 +1,5 @@
 package com.unip.cc7p33.memorizeflashcardapp.database;
 
-import androidx.core.util.Pair;
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
@@ -76,4 +75,7 @@ public interface FlashcardDAO {
     // deletar carta pelo id
     @Query("DELETE FROM flashcard WHERE flashcardId = :flashcardId")
     void deleteByCardId(String flashcardId);
+
+    @Query("SELECT COUNT(*) FROM flashcard WHERE userId = :userId AND proximaRevisao <= :today")
+    int getDueCardsCount(String userId, long today);
 }
