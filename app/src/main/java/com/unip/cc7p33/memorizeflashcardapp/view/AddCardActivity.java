@@ -46,8 +46,6 @@ public class AddCardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_card);
 
-        SystemUIUtils.hideStatusBar(this);
-
         flashcardService = new FlashcardService();
         flashcardService.setFlashcardDAO(AppDatabase.getInstance(this).flashcardDAO());
         authService = new AuthService(this);

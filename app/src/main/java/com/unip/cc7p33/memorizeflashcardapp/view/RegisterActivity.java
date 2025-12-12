@@ -8,11 +8,7 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.unip.cc7p33.memorizeflashcardapp.R;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
@@ -31,7 +27,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         editTextNome = findViewById(R.id.edit_text_nome_registro);
         editTextEmail = findViewById(R.id.edit_text_email_registro);

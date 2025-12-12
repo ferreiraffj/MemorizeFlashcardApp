@@ -18,6 +18,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -72,9 +73,10 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         setContentView(R.layout.activity_main);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         // Inicialização dos serviços
         authService = new AuthService(this);
@@ -190,8 +192,8 @@ public class MainActivity extends AppCompatActivity implements BaralhoAdapter.On
                 startActivity(new Intent(MainActivity.this, ProfileActivity.class));
             } else if (id == R.id.nav_dashboards) {
                 startActivity(new Intent(this, DashboardActivity.class));
-            } else if (id == R.id.nav_ajuda) {
-                Toast.makeText(this, "Ajuda - Em breve!", Toast.LENGTH_SHORT).show();
+//            } else if (id == R.id.nav_ajuda) {
+//                Toast.makeText(this, "Ajuda - Em breve!", Toast.LENGTH_SHORT).show();
             } else if (id == R.id.nav_baralhos){
                 startActivity(new Intent(MainActivity.this, DeckManagementActivity.class));
             }

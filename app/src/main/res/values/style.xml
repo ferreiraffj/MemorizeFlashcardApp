@@ -1,0 +1,5 @@
+<resources>
+    <style name="NavigationViewTextStyle" parent="Base.TextAppearance.AppCompat.Body1">
+        <item name="android:textSize">16sp</item> <!-- Tamanho de texto que você deseja -->
+    </style>
+</resources>

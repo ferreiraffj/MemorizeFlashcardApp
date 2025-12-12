@@ -3,6 +3,7 @@ package com.unip.cc7p33.memorizeflashcardapp.view;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,7 +32,7 @@ import java.util.Map;
 public class DashboardActivity extends AppCompatActivity {
     private TextView tvDashboardOfensiva, tvDashboardCartasMaduras, tvDashboardMelhorBaralho, tvDashboardRetencao;
     private BarChart barChart;
-    private CardView cardConhecimentoSolido;
+    private CardView cardConhecimentoSolido, cardGraficoProgresso, cardRetention;
     private DashboardService dashboardService;
     private String currentUserId;
     private int matureCardsCount = 0; // Variável para armazenar a contagem
@@ -45,7 +46,7 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         dashboardService = new DashboardService(this);
         mAuth = FirebaseAuth.getInstance();
@@ -94,6 +95,10 @@ public class DashboardActivity extends AppCompatActivity {
         tvDashboardRetencao = findViewById(R.id.tv_dashboard_retencao);
         barChart = findViewById(R.id.chart_progresso_estudo);
         cardConhecimentoSolido = findViewById(R.id.card_conhecimento_solido);
+        cardGraficoProgresso = findViewById(R.id.card_grafico_progresso);
+        cardRetention = findViewById(R.id.card_retention);
+
+        cardGraficoProgresso.setVisibility(View.GONE);
     }
 
     private void setupClickListeners() {
@@ -104,6 +109,11 @@ public class DashboardActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "Você ainda não tem cartas com conhecimento sólido.", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        cardRetention.setOnClickListener(v -> {
+            Intent intent = new Intent(DashboardActivity.this, RetentionDetailsActivity.class);
+            startActivity(intent);
         });
     }
 

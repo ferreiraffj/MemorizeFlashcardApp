@@ -54,7 +54,7 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         editTextEmail = findViewById(R.id.edit_text_email_login);
         editTextSenha = findViewById(R.id.edit_text_senha_login);

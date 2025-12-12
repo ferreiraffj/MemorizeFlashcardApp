@@ -12,15 +12,16 @@
         android:padding="16dp">
 
         <!-- CONTAINER 1: GRÁFICO (Placeholder por enquanto) -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Dashboards"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="@color/black"/>
+<!--        <TextView-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Dashboards"-->
+<!--            android:textSize="20sp"-->
+<!--            android:textStyle="bold"-->
+<!--            android:textColor="@color/black"/>-->
 
         <androidx.cardview.widget.CardView
+            android:id="@+id/card_grafico_progresso"
             android:layout_width="match_parent"
             android:layout_height="200dp"
             app:cardCornerRadius="8dp"
@@ -61,7 +62,7 @@
             android:columnCount="2"
             android:layout_marginTop="8dp"
             android:alignmentMode="alignMargins"
-            android:columnOrderPreserved="false">
+            android.columnOrderPreserved="false">
 
             <!-- Card 1: Ofensiva -->
             <androidx.cardview.widget.CardView style="@style/DashboardCard">
@@ -93,7 +94,9 @@
             </androidx.cardview.widget.CardView>
 
             <!-- Card 4: Previsão de Retenção -->
-            <androidx.cardview.widget.CardView style="@style/DashboardCard">
+            <androidx.cardview.widget.CardView 
+                android:id="@+id/card_retention"
+                style="@style/DashboardCard">
                 <LinearLayout style="@style/DashboardCardContent">
                     <ImageView style="@style/DashboardCardIcon" android:src="@drawable/ic_chart"/> <!-- Crie este ícone -->
                     <TextView style="@style/DashboardCardTitle" android:text="Retenção Estimada"/>

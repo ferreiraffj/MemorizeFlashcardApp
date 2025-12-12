@@ -39,7 +39,7 @@ public class SessaoEstudoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sessao_estudo);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         @SuppressWarnings("unchecked")
         List<Flashcard> receivedList = (List<Flashcard>) getIntent().getSerializableExtra("CARD_LIST");
