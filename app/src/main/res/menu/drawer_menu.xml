@@ -2,14 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_perfil"
+        android:icon="@drawable/ic_menu"
         android:title="Perfil" />
     <item
         android:id="@+id/nav_dashboards"
+        android:icon="@drawable/ic_chart"
         android:title="Dashboards" />
     <item
         android:id="@+id/nav_baralhos"
+        android:icon="@drawable/ic_create_deck"
         android:title="Baralhos" />
-    <item
-        android:id="@+id/nav_ajuda"
-        android:title="Ajuda" />
+<!--    <item-->
+<!--        android:id="@+id/nav_ajuda"-->
+<!--        android:title="Ajuda" />-->
 </menu>

@@ -1,13 +1,9 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -50,7 +46,7 @@ public class CardListActivity extends AppCompatActivity implements FlashcardAdap
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_card_list);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         deckId = getIntent().getStringExtra("DECK_ID");
         String deckName = getIntent().getStringExtra("DECK_NAME");

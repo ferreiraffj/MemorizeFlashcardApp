@@ -1,6 +1,5 @@
 package com.unip.cc7p33.memorizeflashcardapp.view;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
@@ -39,7 +38,7 @@ public class DeckManagementActivity extends AppCompatActivity implements DeckMan
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_deck_management);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         authService = new AuthService(this);
         baralhoService = new BaralhoService();

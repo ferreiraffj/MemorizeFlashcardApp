@@ -1,6 +1,7 @@
 package com.unip.cc7p33.memorizeflashcardapp.service;
 
-import android.content.Context;import android.util.Pair;
+import android.content.Context;
+import android.util.Pair;
 
 import com.unip.cc7p33.memorizeflashcardapp.database.AppDatabase;
 import com.unip.cc7p33.memorizeflashcardapp.database.BaralhoDAO;
@@ -9,7 +10,7 @@ import com.unip.cc7p33.memorizeflashcardapp.database.UsuarioDAO;
 import com.unip.cc7p33.memorizeflashcardapp.model.Baralho;
 import com.unip.cc7p33.memorizeflashcardapp.model.DeckStats;
 import com.unip.cc7p33.memorizeflashcardapp.model.EstudoDiario;
-import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;  // Adicionado
+import com.unip.cc7p33.memorizeflashcardapp.model.Flashcard;
 import com.unip.cc7p33.memorizeflashcardapp.model.Usuario;
 
 import java.util.Calendar;
@@ -66,7 +67,6 @@ public class DashboardService {
         });
     }
 
-    // 6. Buscar a lista de Cartas Maduras
     public void getMatureCards(String userId, DashboardDataCallback<List<Flashcard>> callback) {
         final int DIAS_PARA_SER_MADURA = 21;
         executor.execute(() -> {
@@ -115,23 +115,53 @@ public class DashboardService {
         });
     }
 
-    public void getTaxaRetencao(String userId, DashboardDataCallback<Integer> callback) {
+    public void getGlobalStats(String userId, DashboardDataCallback<DeckStats> callback) {
         executor.execute(() -> {
             try {
-                DeckStats stats = flashcardDAO.getReviewedCardsStats(userId);
-                int acertosRevisao = (stats != null) ? stats.totalAcertos : 0;
-                int errosRevisao = (stats != null) ? stats.totalErros : 0;
-                int totalRevisoes = acertosRevisao + errosRevisao;
+                List<Baralho> baralhos = baralhoDAO.getAllDecksSync(userId);
+                int totalAcertosGlobal = 0;
+                int totalErrosGlobal = 0;
 
-                int taxaRetencao = 0;
-                if (totalRevisoes > 0) {
-                    taxaRetencao = (int) (((double) acertosRevisao / totalRevisoes) * 100);
+                if (baralhos != null) {
+                    for (Baralho baralho : baralhos) {
+                        DeckStats stats = flashcardDAO.getDeckStats(baralho.getBaralhoId());
+                        if (stats != null) {
+                            totalAcertosGlobal += stats.totalAcertos;
+                            totalErrosGlobal += stats.totalErros;
+                        }
+                    }
                 }
 
-                final int finalTaxaRetencao = taxaRetencao;
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onDataLoaded(finalTaxaRetencao));
+                final DeckStats globalStats = new DeckStats();
+                globalStats.totalAcertos = totalAcertosGlobal;
+                globalStats.totalErros = totalErrosGlobal;
+
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onDataLoaded(globalStats));
+
             } catch (Exception e) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> callback.onError(e));
+            }
+        });
+    }
+
+    public void getTaxaRetencao(String userId, DashboardDataCallback<Integer> callback) {
+        getGlobalStats(userId, new DashboardDataCallback<DeckStats>() {
+            @Override
+            public void onDataLoaded(DeckStats stats) {
+                int acertos = stats.totalAcertos;
+                int erros = stats.totalErros;
+                int total = acertos + erros;
+
+                int taxaRetencao = 0;
+                if (total > 0) {
+                    taxaRetencao = (int) (((double) acertos / total) * 100);
+                }
+                callback.onDataLoaded(taxaRetencao);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                callback.onError(e);
             }
         });
     }

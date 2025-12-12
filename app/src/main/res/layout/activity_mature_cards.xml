@@ -11,7 +11,7 @@
         android:id="@+id/toolbar_mature_cards"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary"
+        android:background="@color/blueBgAuth"
         app:title="Conhecimento Sólido"
         app:titleTextColor="@android:color/white"
         app:navigationIcon="@drawable/ic_arrow_back"/>

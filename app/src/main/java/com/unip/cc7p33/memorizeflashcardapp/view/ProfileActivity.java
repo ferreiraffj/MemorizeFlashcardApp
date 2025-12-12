@@ -48,7 +48,7 @@ public class ProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
-        SystemUIUtils.hideStatusBar(this);
+        SystemUIUtils.setImmersiveMode(this);
 
         // 1. Configura a Toolbar
         Toolbar toolbar = findViewById(R.id.toolbar_profile);
