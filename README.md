@@ -17,10 +17,10 @@ Desenvolver uma ferramenta de estudos baseada em flashcards que:
 | Feature               | Descrição                                                                 | Status       |  
 |-----------------------|---------------------------------------------------------------------------|--------------|  
 | :busts_in_silhouette: Autenticação | Login com e-mail/Firebase Auth                                          | ✔️ Implementado |  
-| :notebook: Baralhos   | Crie e organize flashcards por matéria/tema                              | 🚧 Em progresso |  
-| :game_die: Gamificação| Ganhe XP, suba de nível e desbloqueie conquistas                         | 🚧 Em progresso |  
-| :chart_with_upwards_trend: Estatísticas | Visualize acertos, erros e tempo médio por baralho           | 🚧 Em progresso |  
-| :bell: Notificações   | Lembretes para revisões pendentes                                        | ✅ Planejado   |  
+| :notebook: Baralhos   | Crie e organize flashcards por matéria/tema                              | ✔️ Implementado |  
+| :game_die: Gamificação| Ganhe XP, suba de nível e desbloqueie conquistas                         | ✔️ Implementado |  
+| :chart_with_upwards_trend: Estatísticas | Visualize acertos, erros e tempo médio por baralho           | ✔️ Implementado |  
+| :bell: Notificações   | Lembretes para revisões pendentes                                        | ✔️ Implementado |  
 
 ---
 
@@ -41,10 +41,13 @@ memorizeflashcardaapp/
 ├── app/
 │ ├── src/main/
 │ │ ├── java/com/flashmaster/
-│ │ │ ├── models/ # Classes de dados (Usuario, Baralho, Flashcard, Desempenho)
-│ │ │ ├── services/ # Lógica de negócio (AuthService, BaralhoService, FlashcardService, GamificacaoService)
-│ │ │ ├── views/ # Activities e Fragments
-│ │ │ └── adapters/ # RecyclerView.Adapters
+│ │ │ ├── adapter/ # RecyclerView.Adapters
+│ │ │ ├── database/ # AppDatabase e dados dos models
+│ │ │ ├── model/ # Classes de dados (Usuario, Baralho, Flashcard, Desempenho)
+│ │ │ ├── repository
+│ │ │ ├── service/ # Lógica de negócio (AuthService, BaralhoService, FlashcardService, GamificacaoService)
+│ │ │ ├── utils/ # Utilitários (Funções de UI)
+│ │ │ └── view/ # Activities e Fragments
 │ │ └── res/ # Layouts, strings, ícones
 ├── README.md
 └── build.gradle
